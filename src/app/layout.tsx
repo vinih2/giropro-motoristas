@@ -1,24 +1,15 @@
 "use client";
 
-import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/custom/navbar";
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-export const metadata: Metadata = {
-  title: "GiroPro - Seu Coach Financeiro",
-  description:
-    "Calcule seu lucro real, custo por km e receba insights para ganhar mais como motorista ou entregador",
-};
-
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-
-  // 🔥 Persistência manual da sessão (necessário no Supabase Free)
+}) {
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -44,4 +35,3 @@ export default function RootLayout({
     </html>
   );
 }
-
