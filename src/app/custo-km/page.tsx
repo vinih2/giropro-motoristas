@@ -19,11 +19,7 @@ export default function CustoKm() {
   const buscarPrecosCombustivel = async () => {
     setLoadingAPI(true);
     try {
-      // Simulação de API - em produção, usar API real de preços
-      // Exemplo: https://brasilapi.com.br/api/cptec/v1/cidade
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Preços médios simulados (em produção, buscar de API real)
       const precosSimulados = {
         gasolina: (5.50 + Math.random() * 0.50).toFixed(2),
         etanol: (3.80 + Math.random() * 0.40).toFixed(2),
@@ -50,7 +46,6 @@ export default function CustoKm() {
   };
 
   const handleCalcular = () => {
-    // Validação de campos
     if (!consumo || !preco) {
       alert('⚠️ Por favor, preencha o consumo médio e o preço do combustível!');
       return;
@@ -60,7 +55,6 @@ export default function CustoKm() {
     const precoNum = parseFloat(preco);
     const kmNum = parseFloat(km || '0');
 
-    // Validação de valores
     if (isNaN(consumoNum) || isNaN(precoNum) || isNaN(kmNum)) {
       alert('⚠️ Por favor, insira valores numéricos válidos!');
       return;
@@ -81,13 +75,11 @@ export default function CustoKm() {
     const calc = calcularCustoPorKm(dados);
     setResultado(calc);
 
-    // Salvar custo por km no localStorage para usar no dashboard
     if (typeof window !== 'undefined') {
       localStorage.setItem('custoPorKm', calc.custoPorKm.toFixed(2));
     }
 
-    // Gerar insight
-    const minimoViavel = calc.custoPorKm * 1.5; // Mínimo 50% acima do custo
+    const minimoViavel = calc.custoPorKm * 1.5; 
     let insightTexto = `Seu custo por km é ${formatarMoeda(calc.custoPorKm)}. `;
     insightTexto += `Para valer a pena, suas corridas precisam pagar pelo menos ${formatarMoeda(minimoViavel)} por km. `;
     
@@ -115,28 +107,25 @@ export default function CustoKm() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
       <div className="text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl mb-4 shadow-lg">
           <Fuel className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Calculadora de Custo por KM
         </h1>
-        <p className="text-gray-600">Descubra quanto você gasta para rodar</p>
+        <p className="text-gray-600 dark:text-gray-300">Descubra quanto você gasta para rodar</p>
       </div>
 
-      {/* Formulário */}
-      <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
           <Zap className="w-5 h-5 text-blue-600" />
           Entradas
         </h2>
 
         <div className="space-y-5">
-          {/* Tipo de Veículo - Botões Segmentados */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
               Tipo de Veículo
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -147,7 +136,7 @@ export default function CustoKm() {
                   className={`px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${
                     tipoVeiculo === tipo
                       ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-lg scale-105'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-102'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-102'
                   }`}
                 >
                   {tipo}
@@ -156,9 +145,8 @@ export default function CustoKm() {
             </div>
           </div>
 
-          {/* Consumo Médio */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               ⚡ Consumo Médio ({getUnidade()})
             </label>
             <input
@@ -167,13 +155,12 @@ export default function CustoKm() {
               value={consumo}
               onChange={(e) => setConsumo(e.target.value)}
               placeholder={tipoVeiculo === 'Elétrico' ? '6.5' : '12.5'}
-              className="w-full px-5 py-4 text-xl border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
 
-          {/* Preço do Combustível */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               💰 {getCombustivelLabel()}
             </label>
             <div className="flex gap-2">
@@ -183,7 +170,7 @@ export default function CustoKm() {
                 value={preco}
                 onChange={(e) => setPreco(e.target.value)}
                 placeholder={tipoVeiculo === 'Elétrico' ? '0.85' : '5.50'}
-                className="flex-1 px-5 py-4 text-xl border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="flex-1 px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               />
               {tipoVeiculo !== 'Elétrico' && (
                 <button
@@ -202,15 +189,14 @@ export default function CustoKm() {
               )}
             </div>
             {tipoVeiculo !== 'Elétrico' && (
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 💡 Clique em "Buscar Preço" para obter valores atualizados da sua região
               </p>
             )}
           </div>
 
-          {/* Quilômetros Rodados */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               🛣️ Quilômetros Rodados Hoje (opcional)
             </label>
             <input
@@ -219,11 +205,10 @@ export default function CustoKm() {
               value={km}
               onChange={(e) => setKm(e.target.value)}
               placeholder="120"
-              className="w-full px-5 py-4 text-xl border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
 
-          {/* Botão */}
           <button
             onClick={handleCalcular}
             disabled={!consumo || !preco}
@@ -234,15 +219,13 @@ export default function CustoKm() {
         </div>
       </div>
 
-      {/* Resultados */}
       {resultado && (
         <div className="space-y-4 animate-fade-in">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <TrendingDown className="w-5 h-5 text-red-600" />
             Resultados
           </h2>
 
-          {/* Cards de Custo */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-all">
               <div className="flex items-center gap-2 mb-3">
@@ -267,49 +250,46 @@ export default function CustoKm() {
             )}
           </div>
 
-          {/* Comparação Flex */}
           {resultado.comparacaoFlex && (
-            <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2 text-lg">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 text-lg">
                 <Fuel className="w-5 h-5 text-blue-600" />
                 Comparação Gasolina vs Etanol
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-5 bg-gray-50 rounded-xl border-2 border-gray-200">
-                  <p className="text-sm text-gray-600 mb-2 font-medium">Gasolina</p>
-                  <p className="text-3xl font-bold text-gray-900">
+                <div className="text-center p-5 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Gasolina</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {formatarMoeda(resultado.comparacaoFlex.gasolina)}/km
                   </p>
                 </div>
-                <div className="text-center p-5 bg-green-50 rounded-xl border-2 border-green-500">
-                  <p className="text-sm text-green-700 mb-2 font-medium">Etanol ✓</p>
-                  <p className="text-3xl font-bold text-green-700">
+                <div className="text-center p-5 bg-green-50 dark:bg-green-900/20 rounded-xl border-2 border-green-500 dark:border-green-600">
+                  <p className="text-sm text-green-700 dark:text-green-400 mb-2 font-medium">Etanol ✓</p>
+                  <p className="text-3xl font-bold text-green-700 dark:text-green-400">
                     {formatarMoeda(resultado.comparacaoFlex.etanol)}/km
                   </p>
                 </div>
               </div>
-              <p className="text-center text-sm text-gray-600 mt-4 font-medium">
-                Melhor opção hoje: <span className="font-bold text-green-600">{resultado.comparacaoFlex.melhorOpcao}</span>
+              <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-4 font-medium">
+                Melhor opção hoje: <span className="font-bold text-green-600 dark:text-green-400">{resultado.comparacaoFlex.melhorOpcao}</span>
               </p>
             </div>
           )}
 
-          {/* Insight */}
-          <div className="bg-gradient-to-r from-blue-100 to-cyan-100 rounded-2xl shadow-xl p-6 border-2 border-blue-300">
+          <div className="bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-2xl shadow-xl p-6 border-2 border-blue-300 dark:border-blue-700">
             <div className="flex items-start gap-4">
               <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl p-3 shadow-lg">
                 <AlertCircle className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 mb-3 text-lg">💰 Análise de Custo</h3>
-                <p className="text-gray-800 leading-relaxed font-medium">{insight}</p>
+                <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-lg">💰 Análise de Custo</h3>
+                <p className="text-gray-800 dark:text-gray-200 leading-relaxed font-medium">{insight}</p>
               </div>
             </div>
           </div>
 
-          {/* Aviso de atualização */}
-          <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
-            <p className="text-sm text-green-800 text-center font-medium">
+          <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700 rounded-xl p-4">
+            <p className="text-sm text-green-800 dark:text-green-200 text-center font-medium">
               ✅ Custo por KM atualizado! Agora o Dashboard usará <span className="font-bold text-lg">{formatarMoeda(resultado.custoPorKm)}</span> nos cálculos.
             </p>
           </div>
