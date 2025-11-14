@@ -4,29 +4,36 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
+
   const supabase = createMiddlewareClient({ req, res })
 
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // Rotas protegidas
-  const protectedRoutes = ['/dashboard', '/custo-km', '/insights', '/historico', '/desempenho', '/giropro-plus']
-  const isProtectedRoute = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))
+  const protectedRoutes = [
+    '/dashboard',
+    '/custo-km',
+    '/insights',
+    '/historico',
+    '/desempenho',
+    '/giropro-plus'
+  ]
 
-  // Se tentar acessar rota protegida sem sessão, redireciona pro login
-  if (isProtectedRoute && !session) {
-    return NextResponse.redirect(new URL('/login', req.url))
-  }
+  const isProtected = protectedRoutes.some((route) =>
+    req.nextUrl.pathname.startsWith(route)
+  )
 
-  // Se já estiver logado e tentar ir pro login, manda pra home
-  if (req.nextUrl.pathname === '/login' && session) {
-    return NextResponse.redirect(new URL('/', req.url))
+  // Not logged in
+  if (isProtected && !session) {
+    const redirectUrl = req.nextUrl.clone()
+    redirectUrl.pathname = '/login'
+    return NextResponse.redirect(redirectUrl)
   }
 
   return res
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next|api|favicon.ico).*)'],
 }
