@@ -125,9 +125,9 @@ Tom direto e amigável. Máximo 5 linhas.`
 
   const getBadge = (lucro: number, horas: number) => {
     const lucroPorHora = horas > 0 ? lucro / horas : 0;
-    if (lucroPorHora < 12) return { label: 'Fraco', color: 'bg-red-100 text-red-700 border-red-300' };
-    if (lucroPorHora < 20) return { label: 'Médio', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' };
-    return { label: 'Bom', color: 'bg-green-100 text-green-700 border-green-300' };
+    if (lucroPorHora < 12) return { label: 'Fraco', color: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700' };
+    if (lucroPorHora < 20) return { label: 'Médio', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700' };
+    return { label: 'Bom', color: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700' };
   };
 
   return (
@@ -137,10 +137,10 @@ Tom direto e amigável. Máximo 5 linhas.`
         <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 rounded-3xl mb-4 shadow-2xl">
           <Calendar className="w-10 h-10 text-white" />
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
           Histórico de Giros
         </h1>
-        <p className="text-gray-600 text-lg">Acompanhe todos os seus registros</p>
+        <p className="text-gray-600 dark:text-gray-300 text-lg">Acompanhe todos os seus registros</p>
       </div>
 
       {/* Botão Gerar Resumo */}
@@ -165,20 +165,20 @@ Tom direto e amigável. Máximo 5 linhas.`
 
       {/* Resumo Semanal */}
       {resumoSemanal && (
-        <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 rounded-2xl shadow-xl p-6 border-2 border-purple-300 animate-fade-in">
-          <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2 text-xl">
+        <div className="bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-purple-900/30 rounded-2xl shadow-xl p-6 border-2 border-purple-300 dark:border-purple-700 animate-fade-in">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 text-xl">
             <Lightbulb className="w-6 h-6 text-purple-600" />
             Resumo Semanal
           </h3>
-          <div className="bg-white rounded-xl p-5 shadow-sm">
-            <p className="text-gray-800 text-lg leading-relaxed whitespace-pre-line font-medium">{resumoSemanal}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm">
+            <p className="text-gray-800 dark:text-gray-200 text-lg leading-relaxed whitespace-pre-line font-medium">{resumoSemanal}</p>
           </div>
         </div>
       )}
 
       {/* Lista de Registros */}
-      <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
           <TrendingUp className="w-6 h-6 text-blue-600" />
           Seus Registros
         </h2>
@@ -190,8 +190,8 @@ Tom direto e amigável. Máximo 5 linhas.`
         ) : registros.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">Nenhum registro encontrado.</p>
-            <p className="text-gray-400 text-sm mt-2">Comece a registrar seus giros no Dashboard!</p>
+            <p className="text-gray-500 dark:text-gray-400 text-lg">Nenhum registro encontrado.</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Comece a registrar seus giros no Dashboard!</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -202,7 +202,7 @@ Tom direto e amigável. Máximo 5 linhas.`
               return (
                 <div
                   key={registro.id}
-                  className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-5 border-2 border-gray-200 hover:border-blue-300 transition-all hover:shadow-lg"
+                  className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-800/50 rounded-xl p-5 border-2 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 transition-all hover:shadow-lg"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     {/* Data e Plataforma */}
@@ -211,49 +211,49 @@ Tom direto e amigável. Máximo 5 linhas.`
                         <Calendar className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900 text-lg">
+                        <p className="font-bold text-gray-900 dark:text-white text-lg">
                           {new Date(registro.data + 'T00:00:00').toLocaleDateString('pt-BR', {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric'
                           })}
                         </p>
-                        <p className="text-sm text-gray-600">{registro.plataforma}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{registro.plataforma}</p>
                       </div>
                     </div>
 
                     {/* Métricas */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
                       <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 text-gray-600 mb-1">
+                        <div className="flex items-center justify-center gap-1 text-gray-600 dark:text-gray-400 mb-1">
                           <Clock className="w-4 h-4" />
                           <span className="text-xs font-medium">Horas</span>
                         </div>
-                        <p className="font-bold text-gray-900">{registro.horas}h</p>
+                        <p className="font-bold text-gray-900 dark:text-white">{registro.horas}h</p>
                       </div>
 
                       <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 text-gray-600 mb-1">
+                        <div className="flex items-center justify-center gap-1 text-gray-600 dark:text-gray-400 mb-1">
                           <Navigation className="w-4 h-4" />
                           <span className="text-xs font-medium">KM</span>
                         </div>
-                        <p className="font-bold text-gray-900">{registro.km}km</p>
+                        <p className="font-bold text-gray-900 dark:text-white">{registro.km}km</p>
                       </div>
 
                       <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 text-gray-600 mb-1">
+                        <div className="flex items-center justify-center gap-1 text-gray-600 dark:text-gray-400 mb-1">
                           <TrendingUp className="w-4 h-4" />
                           <span className="text-xs font-medium">R$/Hora</span>
                         </div>
-                        <p className="font-bold text-gray-900">{formatarMoeda(lucroPorHora)}</p>
+                        <p className="font-bold text-gray-900 dark:text-white">{formatarMoeda(lucroPorHora)}</p>
                       </div>
 
                       <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 text-gray-600 mb-1">
+                        <div className="flex items-center justify-center gap-1 text-gray-600 dark:text-gray-400 mb-1">
                           <DollarSign className="w-4 h-4" />
                           <span className="text-xs font-medium">Lucro</span>
                         </div>
-                        <p className="font-bold text-green-600 text-lg">{formatarMoeda(registro.lucro)}</p>
+                        <p className="font-bold text-green-600 dark:text-green-400 text-lg">{formatarMoeda(registro.lucro)}</p>
                       </div>
                     </div>
 
