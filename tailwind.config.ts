@@ -1,7 +1,9 @@
 import type { Config } from "tailwindcss";
+// ✅ CORREÇÃO: Importar o plugin diretamente no topo
+import tailwindAnimate from "tailwindcss-animate"; 
 
 const config: Config = {
-  darkMode: "class", // ✅ ESSENCIAL PARA O DARK MODE FUNCIONAR
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -15,6 +17,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  // ✅ Usar o plugin importado na lista
+  plugins: [tailwindAnimate], 
 };
 export default config;
