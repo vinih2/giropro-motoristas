@@ -54,7 +54,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-orange-50 via-white to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-black">
       <div className="max-w-md w-full">
-        {/* Logo e Título */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-3">
             GiroPro
@@ -62,9 +61,7 @@ export default function LoginPage() {
           <p className="text-gray-600 dark:text-gray-300 text-lg">Entre para acessar seu coach financeiro</p>
         </div>
 
-        {/* Card de Login */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 border border-gray-100 dark:border-gray-800">
-          {/* Botão Google */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -74,7 +71,6 @@ export default function LoginPage() {
             Continuar com Google
           </button>
 
-          {/* Divisor */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
@@ -84,7 +80,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Formulário Email */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -119,7 +114,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Mensagem */}
           {message && (
             <div className={`mt-4 p-4 rounded-xl text-sm font-medium ${
               message.includes('✅') 
@@ -130,7 +124,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Info */}
           <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">
             Ao entrar, você concorda com nossos Termos de Uso e Política de Privacidade
           </p>
