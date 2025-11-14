@@ -22,8 +22,8 @@ export default function RootLayout({
       }
     );
 
-    // --- ⚡ Lógica Correta do Dark Mode ---
-    // Verifica o localStorage antes de aplicar a classe
+    // --- LÓGICA CORRETA DO TEMA ---
+    // Verifica o localStorage em vez de forçar "dark"
     const theme = localStorage.getItem("theme") || "light";
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
