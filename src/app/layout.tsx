@@ -27,8 +27,17 @@ export default function RootLayout({
   }, []);
 
   return (
-    <html lang="pt-BR">
-      <body className="antialiased bg-gradient-to-br from-orange-50 via-white to-yellow-50 min-h-screen">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body
+        className="
+          antialiased min-h-screen 
+          bg-gradient-to-br from-orange-50 via-white to-yellow-50 
+          text-gray-900
+          dark:bg-gradient-to-br dark:from-gray-900 dark:via-black dark:to-gray-950 
+          dark:text-gray-100
+          transition-colors duration-300
+        "
+      >
         <Navbar />
         <main className="pb-20 pt-4 md:pt-20 md:pb-4">{children}</main>
       </body>
