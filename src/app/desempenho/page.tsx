@@ -3,9 +3,13 @@
 import { useState, useEffect } from 'react';
 import { formatarMoeda } from '@/lib/calculations';
 import { BarChart3, TrendingUp, Clock, Navigation, DollarSign, Calendar, Target, Zap } from 'lucide-react';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 interface Registro {
   id: number;
+  user_id: string;
   data: string;
   plataforma: string;
   horas: number;
@@ -15,26 +19,56 @@ interface Registro {
   lucro: number;
 }
 
-export default function Desempenho() {
+function DesempenhoContent() {
+  const { user } = useAuth();
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [loading, setLoading] = useState(true);
   const [analiseIA, setAnaliseIA] = useState('');
   const [loadingIA, setLoadingIA] = useState(false);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (user) {
+      carregarDados();
+    }
+  }, [user]);
 
-  const carregarDados = () => {
+  const carregarDados = async () => {
+    if (!user) return;
+
+    try {
+      // Tentar carregar do Supabase primeiro
+      const { data, error } = await supabase
+        .from('registros')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('data', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar do Supabase:', error);
+        carregarDoLocalStorage();
+      } else if (data) {
+        setRegistros(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar registros:', error);
+      carregarDoLocalStorage();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const carregarDoLocalStorage = () => {
     try {
       const dados = localStorage.getItem('registros');
       if (dados) {
-        setRegistros(JSON.parse(dados));
+        const todosRegistros = JSON.parse(dados);
+        const registrosUsuario = todosRegistros.filter(
+          (r: Registro) => r.user_id === user?.id || r.user_id === 'local'
+        );
+        setRegistros(registrosUsuario);
       }
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-    } finally {
-      setLoading(false);
+      console.error('Erro ao carregar do localStorage:', error);
     }
   };
 
@@ -261,5 +295,13 @@ Seja direto, motivador e sugira UMA ação prática. Máximo 3 linhas.`
         </>
       )}
     </div>
+  );
+}
+
+export default function Desempenho() {
+  return (
+    <ProtectedRoute>
+      <DesempenhoContent />
+    </ProtectedRoute>
   );
 }

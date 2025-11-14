@@ -4,8 +4,12 @@ import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
 import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
 import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Target } from 'lucide-react';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
-export default function Dashboard() {
+function DashboardContent() {
+  const { user } = useAuth();
   const [plataforma, setPlataforma] = useState<Plataforma>('Uber');
   const [ganhoBruto, setGanhoBruto] = useState('');
   const [horas, setHoras] = useState('');
@@ -123,23 +127,31 @@ Seja direto, use emoji e sugira uma ação prática.`
     setResultado(calc);
     setLoading(true);
 
-    // Salvar no localStorage
-    try {
-      const registrosAtuais = JSON.parse(localStorage.getItem('registros') || '[]');
-      const novoRegistro = {
-        id: Date.now(),
-        data: new Date().toISOString().split('T')[0],
-        plataforma,
-        horas: horasNum,
-        km: kmNum,
-        ganho_bruto: ganhoBrutoNum,
-        custo_km: custoPorKm,
-        lucro: calc.lucroFinal,
-      };
-      registrosAtuais.unshift(novoRegistro);
-      localStorage.setItem('registros', JSON.stringify(registrosAtuais));
-    } catch (error) {
-      console.log('Erro ao salvar registro:', error);
+    // Salvar no Supabase com user_id
+    if (user) {
+      try {
+        const { error } = await supabase.from('registros').insert({
+          user_id: user.id,
+          data: new Date().toISOString().split('T')[0],
+          plataforma,
+          horas: horasNum,
+          km: kmNum,
+          ganho_bruto: ganhoBrutoNum,
+          custo_km: custoPorKm,
+          lucro: calc.lucroFinal,
+        });
+
+        if (error) {
+          console.error('Erro ao salvar no Supabase:', error);
+          // Fallback para localStorage
+          salvarNoLocalStorage(ganhoBrutoNum, horasNum, kmNum, calc);
+        }
+      } catch (error) {
+        console.error('Erro ao salvar:', error);
+        salvarNoLocalStorage(ganhoBrutoNum, horasNum, kmNum, calc);
+      }
+    } else {
+      salvarNoLocalStorage(ganhoBrutoNum, horasNum, kmNum, calc);
     }
 
     // Gerar insight com IA
@@ -175,6 +187,27 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
       setInsight('Seu giro está registrado! Continue assim e acompanhe seus resultados diariamente.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const salvarNoLocalStorage = (ganhoBrutoNum: number, horasNum: number, kmNum: number, calc: any) => {
+    try {
+      const registrosAtuais = JSON.parse(localStorage.getItem('registros') || '[]');
+      const novoRegistro = {
+        id: Date.now(),
+        user_id: user?.id || 'local',
+        data: new Date().toISOString().split('T')[0],
+        plataforma,
+        horas: horasNum,
+        km: kmNum,
+        ganho_bruto: ganhoBrutoNum,
+        custo_km: custoPorKm,
+        lucro: calc.lucroFinal,
+      };
+      registrosAtuais.unshift(novoRegistro);
+      localStorage.setItem('registros', JSON.stringify(registrosAtuais));
+    } catch (error) {
+      console.log('Erro ao salvar registro:', error);
     }
   };
 
@@ -415,5 +448,13 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
         </div>
       )}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }

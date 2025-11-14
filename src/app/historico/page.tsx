@@ -3,9 +3,13 @@
 import { useState, useEffect } from 'react';
 import { formatarMoeda } from '@/lib/calculations';
 import { Calendar, TrendingUp, Clock, Navigation, DollarSign, Lightbulb } from 'lucide-react';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 interface Registro {
   id: number;
+  user_id: string;
   data: string;
   plataforma: string;
   horas: number;
@@ -15,26 +19,58 @@ interface Registro {
   lucro: number;
 }
 
-export default function Historico() {
+function HistoricoContent() {
+  const { user } = useAuth();
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [loading, setLoading] = useState(true);
   const [resumoSemanal, setResumoSemanal] = useState('');
   const [loadingResumo, setLoadingResumo] = useState(false);
 
   useEffect(() => {
-    carregarRegistros();
-  }, []);
+    if (user) {
+      carregarRegistros();
+    }
+  }, [user]);
 
-  const carregarRegistros = () => {
+  const carregarRegistros = async () => {
+    if (!user) return;
+
     try {
-      const dados = localStorage.getItem('registros');
-      if (dados) {
-        setRegistros(JSON.parse(dados));
+      // Tentar carregar do Supabase primeiro
+      const { data, error } = await supabase
+        .from('registros')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('data', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar do Supabase:', error);
+        // Fallback para localStorage
+        carregarDoLocalStorage();
+      } else if (data) {
+        setRegistros(data);
       }
     } catch (error) {
       console.error('Erro ao carregar registros:', error);
+      carregarDoLocalStorage();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const carregarDoLocalStorage = () => {
+    try {
+      const dados = localStorage.getItem('registros');
+      if (dados) {
+        const todosRegistros = JSON.parse(dados);
+        // Filtrar apenas registros do usuário atual
+        const registrosUsuario = todosRegistros.filter(
+          (r: Registro) => r.user_id === user?.id || r.user_id === 'local'
+        );
+        setRegistros(registrosUsuario);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar do localStorage:', error);
     }
   };
 
@@ -235,5 +271,13 @@ Tom direto e amigável. Máximo 5 linhas.`
         )}
       </div>
     </div>
+  );
+}
+
+export default function Historico() {
+  return (
+    <ProtectedRoute>
+      <HistoricoContent />
+    </ProtectedRoute>
   );
 }
