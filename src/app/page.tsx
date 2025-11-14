@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
 import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
-import { TrendingUp, DollarSign, Navigation, Zap, AlertTriangle, Calculator, Check, X } from 'lucide-react';
+import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Calculator, Check, X } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -26,11 +26,12 @@ function DashboardContent() {
   const [custoPorKm, setCustoPorKm] = useState(0.50);
   const [alerta, setAlerta] = useState('');
 
-  // Calculadora Rápida
+  // Estados Calculadora Rápida
   const [quickValor, setQuickValor] = useState('');
   const [quickKm, setQuickKm] = useState('');
   const [quickResultado, setQuickResultado] = useState<{ lucro: number; valeApena: boolean } | null>(null);
 
+  // Constante com TODAS as plataformas
   const plataformas: Plataforma[] = ['Uber', '99', 'iFood', 'Rappi', 'Shopee', 'Amazon', 'Loggi', 'Outro'];
 
   useEffect(() => {
@@ -137,18 +138,18 @@ function DashboardContent() {
     } catch (e) { console.error(e) }
   };
 
+  const desempenho = resultado ? avaliarDesempenho(resultado.ganhoPorHora) : null;
   const progresso = resultado ? Math.min((resultado.lucroFinal / parseFloat(metaDiaria || '1')) * 100, 100) : 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 pb-32">
-      {/* --- HEADER --- */}
+      {/* Header & Meta */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-2">
           GiroPro
         </h1>
         <p className="text-gray-600 dark:text-gray-300 text-lg">Seu Coach Financeiro Pessoal</p>
         
-        {/* Widget de Meta */}
         <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 max-w-md mx-auto">
           <div className="flex justify-between text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
             <span>Meta Diária</span>
@@ -171,13 +172,13 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* --- FORMULÁRIO --- */}
+      {/* Formulário Principal */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800 space-y-5">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Zap className="text-orange-500" /> Novo Registro
         </h2>
 
-        {/* ✅ CORREÇÃO: Mostra TODAS as plataformas */}
+        {/* Grid de Plataformas (Todas as 8) */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Plataforma</label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -197,7 +198,7 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Inputs com Voz */}
+        {/* Inputs com Botão de Voz */}
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium dark:text-gray-300">Ganho Total (R$)</label>
@@ -230,7 +231,7 @@ function DashboardContent() {
         </Button>
       </div>
 
-      {/* --- RESULTADOS --- */}
+      {/* Resultados */}
       {resultado && (
         <div className="grid grid-cols-2 gap-4 animate-fade-in">
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
@@ -247,7 +248,7 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* --- FAB: CALCULADORA RÁPIDA --- */}
+      {/* FAB - Calculadora Rápida */}
       <div className="fixed bottom-24 right-4 z-[60] md:bottom-8">
         <Drawer>
           <DrawerTrigger asChild>
