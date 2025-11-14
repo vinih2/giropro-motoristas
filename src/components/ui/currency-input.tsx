@@ -1,4 +1,3 @@
-// src/components/ui/currency-input.tsx
 'use client';
 
 import * as React from "react";
@@ -10,7 +9,6 @@ interface CurrencyInputProps extends Omit<React.ComponentProps<typeof Input>, 'o
 }
 
 export function CurrencyInput({ value, onChange, className, ...props }: CurrencyInputProps) {
-  // Formata o valor para exibição (R$ 0,00)
   const formatCurrency = (val: string | number) => {
     if (!val) return "";
     const num = Number(val);
@@ -23,17 +21,16 @@ export function CurrencyInput({ value, onChange, className, ...props }: Currency
 
   const [displayValue, setDisplayValue] = React.useState(formatCurrency(value));
 
-  // Atualiza o display se o valor externo mudar
   React.useEffect(() => {
     setDisplayValue(formatCurrency(value));
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/\D/g, ""); // Apenas números
-    const numberValue = Number(rawValue) / 100; // Divide por 100 para centavos
+    const rawValue = e.target.value.replace(/\D/g, ""); 
+    const numberValue = Number(rawValue) / 100; 
     
     setDisplayValue(formatCurrency(numberValue));
-    onChange(numberValue.toString()); // Devolve o número puro para o estado
+    onChange(numberValue.toString());
   };
 
   return (
