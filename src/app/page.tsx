@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
 import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
-import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Calculator, Check, X } from 'lucide-react';
+import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Calculator, Check, X, MapPin } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -13,9 +13,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import VoiceInput from '@/components/VoiceInput';
 
+// Lista simplificada para não travar a tela (Capitais + Grandes Centros)
+const CIDADES_PRINCIPAIS = [
+  'São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Brasília', 'Salvador', 'Fortaleza', 
+  'Curitiba', 'Manaus', 'Recife', 'Porto Alegre', 'Belém', 'Goiânia', 'Guarulhos', 
+  'Campinas', 'São Luís', 'São Gonçalo', 'Maceió', 'Duque de Caxias', 'Natal', 
+  'Campo Grande', 'Teresina', 'São Bernardo do Campo', 'João Pessoa', 'Osasco', 
+  'Santo André', 'Uberlândia', 'Sorocaba', 'Ribeirão Preto', 'Florianópolis'
+];
+
 function DashboardContent() {
   const { user } = useAuth();
+  
+  // Estados
   const [plataforma, setPlataforma] = useState<Plataforma>('Uber');
+  const [cidade, setCidade] = useState('São Paulo'); // ✅ Novo Estado
   const [ganhoBruto, setGanhoBruto] = useState('');
   const [horas, setHoras] = useState('');
   const [km, setKm] = useState('');
@@ -26,29 +38,36 @@ function DashboardContent() {
   const [custoPorKm, setCustoPorKm] = useState(0.50);
   const [alerta, setAlerta] = useState('');
 
-  // Estados Calculadora Rápida
+  // Calculadora Rápida
   const [quickValor, setQuickValor] = useState('');
   const [quickKm, setQuickKm] = useState('');
   const [quickResultado, setQuickResultado] = useState<{ lucro: number; valeApena: boolean } | null>(null);
 
-  // Constante com TODAS as plataformas
   const plataformas: Plataforma[] = ['Uber', '99', 'iFood', 'Rappi', 'Shopee', 'Amazon', 'Loggi', 'Outro'];
 
+  // Carregar dados salvos
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const custo = localStorage.getItem('custoPorKm');
       if (custo) setCustoPorKm(parseFloat(custo));
+      
       const meta = localStorage.getItem('metaDiaria');
       if (meta) setMetaDiaria(meta);
+
+      const cidadeSalva = localStorage.getItem('cidadePadrao');
+      if (cidadeSalva) setCidade(cidadeSalva);
     }
   }, []);
 
+  // Salvar preferências ao mudar
   useEffect(() => {
-    if (metaDiaria && typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
       localStorage.setItem('metaDiaria', metaDiaria);
+      localStorage.setItem('cidadePadrao', cidade);
     }
-  }, [metaDiaria]);
+  }, [metaDiaria, cidade]);
 
+  // Gerar alerta inteligente (com Clima) quando tiver resultado
   useEffect(() => {
     if (resultado) gerarAlerta();
   }, [resultado]);
@@ -62,7 +81,8 @@ function DashboardContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          prompt: `Analise para motorista app: Ganho/h: R$ ${resultado.ganhoPorHora.toFixed(2)}, Custo/km: R$ ${custoPorKm.toFixed(2)}. Meta: R$ ${metaNum}. Gere alerta curto (max 2 linhas) com emoji.`
+          cidade, // ✅ Enviando a cidade para a API de Clima
+          prompt: `Analise para motorista em ${cidade}: Ganho/h: R$ ${resultado.ganhoPorHora.toFixed(2)}, Custo/km: R$ ${custoPorKm.toFixed(2)}. Meta: R$ ${metaNum}. Gere alerta curto (max 2 linhas) com emoji.`
         }),
       });
       const data = await response.json();
@@ -94,6 +114,7 @@ function DashboardContent() {
     setResultado(calc);
     setLoading(true);
     
+    // Salvar no Supabase
     if (user) {
       supabase.from('registros').insert({ 
         user_id: user.id, 
@@ -108,11 +129,17 @@ function DashboardContent() {
       salvarNoLocalStorage(dados, calc);
     }
 
+    // Gerar Insight com Clima
     try {
       const response = await fetch('/api/generate-insight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dados, resultado: calc, prompt: "Gere insight curto e motivador para este resultado." }),
+        body: JSON.stringify({ 
+            dados, 
+            resultado: calc, 
+            cidade, // ✅ Enviando cidade
+            prompt: "Gere insight curto e motivador para este resultado considerando o clima atual." 
+        }),
       });
       const data = await response.json();
       setInsight(data.insight);
@@ -138,18 +165,29 @@ function DashboardContent() {
     } catch (e) { console.error(e) }
   };
 
-  const desempenho = resultado ? avaliarDesempenho(resultado.ganhoPorHora) : null;
   const progresso = resultado ? Math.min((resultado.lucroFinal / parseFloat(metaDiaria || '1')) * 100, 100) : 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 pb-32">
-      {/* Header & Meta */}
+      {/* --- HEADER --- */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-2">
           GiroPro
         </h1>
-        <p className="text-gray-600 dark:text-gray-300 text-lg">Seu Coach Financeiro Pessoal</p>
         
+        {/* Seletor de Cidade (Nativo para não travar) */}
+        <div className="flex justify-center items-center gap-2 mb-2">
+            <MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <select 
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                className="bg-transparent text-gray-700 dark:text-gray-200 font-medium text-sm border-none outline-none cursor-pointer hover:underline appearance-none text-center"
+            >
+                {CIDADES_PRINCIPAIS.map(c => <option key={c} value={c} className="text-black">{c}</option>)}
+            </select>
+        </div>
+
+        {/* Widget de Meta */}
         <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 max-w-md mx-auto">
           <div className="flex justify-between text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
             <span>Meta Diária</span>
@@ -163,6 +201,7 @@ function DashboardContent() {
         </div>
       </div>
 
+      {/* Alerta Inteligente */}
       {alerta && (
         <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-4 shadow-lg animate-fade-in">
           <div className="flex items-start gap-3">
@@ -172,13 +211,12 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Formulário Principal */}
+      {/* --- FORMULÁRIO --- */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800 space-y-5">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Zap className="text-orange-500" /> Novo Registro
         </h2>
 
-        {/* Grid de Plataformas (Todas as 8) */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Plataforma</label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -198,7 +236,6 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Inputs com Botão de Voz */}
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium dark:text-gray-300">Ganho Total (R$)</label>
@@ -231,7 +268,7 @@ function DashboardContent() {
         </Button>
       </div>
 
-      {/* Resultados */}
+      {/* --- RESULTADOS --- */}
       {resultado && (
         <div className="grid grid-cols-2 gap-4 animate-fade-in">
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
