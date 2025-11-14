@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
 import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
-import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Target } from 'lucide-react';
+import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -143,7 +143,6 @@ Seja direto, use emoji e sugira uma ação prática.`
 
         if (error) {
           console.error('Erro ao salvar no Supabase:', error);
-          // Fallback para localStorage
           salvarNoLocalStorage(ganhoBrutoNum, horasNum, kmNum, calc);
         }
       } catch (error) {
@@ -220,22 +219,22 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-2">
           GiroPro
         </h1>
-        <p className="text-gray-600 text-lg">Seu Coach Financeiro Pessoal</p>
+        <p className="text-gray-600 dark:text-gray-300 text-lg">Seu Coach Financeiro Pessoal</p>
       </div>
 
       {/* Alerta Inteligente */}
       {alerta && (
-        <div className="bg-gradient-to-r from-amber-100 to-orange-100 border-2 border-amber-300 rounded-2xl p-4 shadow-lg animate-fade-in">
+        <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-4 shadow-lg animate-fade-in">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p className="text-amber-900 font-medium leading-relaxed">{alerta}</p>
+            <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-900 dark:text-amber-100 font-medium leading-relaxed">{alerta}</p>
           </div>
         </div>
       )}
 
       {/* Seção 1: Dados do Dia */}
-      <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
           <Zap className="w-6 h-6 text-orange-600" />
           Dados do Dia
         </h2>
@@ -243,7 +242,7 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
         <div className="space-y-5">
           {/* Plataforma - Botões Segmentados */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
               Plataforma
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -254,7 +253,7 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
                   className={`px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${
                     plataforma === p
                       ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-lg scale-105'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-102'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-102'
                   }`}
                 >
                   {p}
@@ -265,7 +264,7 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
 
           {/* Ganho Bruto */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               💰 Ganho Bruto do Dia (R$)
             </label>
             <input
@@ -274,14 +273,14 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
               value={ganhoBruto}
               onChange={(e) => setGanhoBruto(e.target.value)}
               placeholder="150.00"
-              className="w-full px-5 py-4 text-xl border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
             />
           </div>
 
           {/* Horas e KM */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 ⏱️ Horas Trabalhadas
               </label>
               <input
@@ -290,11 +289,11 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
                 value={horas}
                 onChange={(e) => setHoras(e.target.value)}
                 placeholder="8"
-                className="w-full px-5 py-4 text-xl border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 🛣️ Quilômetros Rodados
               </label>
               <input
@@ -303,14 +302,14 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
                 value={km}
                 onChange={(e) => setKm(e.target.value)}
                 placeholder="120"
-                className="w-full px-5 py-4 text-xl border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
               />
             </div>
           </div>
 
           {/* Meta Diária */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               🎯 Meta de Lucro do Dia (R$) - Opcional
             </label>
             <input
@@ -319,13 +318,13 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
               value={metaDiaria}
               onChange={(e) => setMetaDiaria(e.target.value)}
               placeholder="200.00"
-              className="w-full px-5 py-4 text-xl border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+              className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
             />
           </div>
 
           {/* Info sobre custo por km */}
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-4">
-            <p className="text-sm text-blue-900 font-medium">
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
               💡 Custo por KM atual: <span className="font-bold text-lg">{formatarMoeda(custoPorKm)}</span>
               {custoPorKm === 0.50 && ' (padrão - calcule seu custo real na aba "Custo por KM")'}
             </p>
@@ -352,7 +351,7 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
       {/* Seção 2: Resultados */}
       {resultado && (
         <div className="animate-fade-in">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <TrendingUp className="w-6 h-6 text-green-600" />
             Resultados
           </h2>
@@ -423,12 +422,12 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
       {/* Seção 3: Insight do Coach */}
       {insight && (
         <div className="animate-fade-in">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Lightbulb className="w-6 h-6 text-yellow-600" />
             Insight do Coach
           </h2>
           
-          <div className="bg-gradient-to-r from-orange-100 via-yellow-100 to-orange-100 rounded-2xl shadow-xl p-6 border-2 border-orange-300">
+          <div className="bg-gradient-to-r from-orange-100 via-yellow-100 to-orange-100 dark:from-orange-900/30 dark:via-yellow-900/30 dark:to-orange-900/30 rounded-2xl shadow-xl p-6 border-2 border-orange-300 dark:border-orange-700">
             <div className="flex items-start gap-4">
               <div className="bg-gradient-to-br from-orange-500 to-yellow-500 rounded-2xl p-3 shadow-lg">
                 <Lightbulb className="w-7 h-7 text-white" />
@@ -437,10 +436,10 @@ Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
                 {loading ? (
                   <div className="flex items-center gap-3">
                     <div className="animate-spin rounded-full h-6 w-6 border-3 border-orange-600 border-t-transparent"></div>
-                    <p className="text-gray-700 font-medium">Analisando seu giro...</p>
+                    <p className="text-gray-700 dark:text-gray-300 font-medium">Analisando seu giro...</p>
                   </div>
                 ) : (
-                  <p className="text-gray-800 text-lg leading-relaxed font-medium whitespace-pre-line">{insight}</p>
+                  <p className="text-gray-800 dark:text-gray-200 text-lg leading-relaxed font-medium whitespace-pre-line">{insight}</p>
                 )}
               </div>
             </div>
