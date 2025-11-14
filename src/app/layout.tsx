@@ -1,0 +1,25 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import Navbar from "@/components/custom/navbar";
+
+export const metadata: Metadata = {
+  title: "GiroPro - Seu Coach Financeiro",
+  description: "Calcule seu lucro real, custo por km e receba insights para ganhar mais como motorista ou entregador",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="pt-BR">
+      <body className="antialiased bg-gradient-to-br from-orange-50 via-white to-yellow-50 min-h-screen">
+        <Navbar />
+        <main className="pb-20 pt-4 md:pt-20 md:pb-4">
+          {children}
+        </main>
+      </body>
+    </html>
+  );
+}
