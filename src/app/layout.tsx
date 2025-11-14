@@ -11,6 +11,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   useEffect(() => {
+    // Persistência Supabase
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
@@ -21,7 +22,7 @@ export default function RootLayout({
       }
     );
 
-    // Lógica Correta: Respeita o usuário
+    // ✅ LÓGICA CORRETA: Lê do localStorage em vez de forçar
     const theme = localStorage.getItem("theme") || "light";
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
