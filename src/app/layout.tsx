@@ -21,7 +21,7 @@ export default function RootLayout({
       }
     );
 
-    // ✅ CORREÇÃO: Lê o tema salvo em vez de forçar 'dark'
+    // Lógica Correta: Respeita o usuário
     const theme = localStorage.getItem("theme") || "light";
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
