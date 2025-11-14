@@ -22,10 +22,7 @@ export default function Simulador() {
     const calc = calcularSimuladorMensal(dados);
     setResultado(calc);
 
-    // Gerar análise
-    const lucroLiquido = parseFloat(ganhoDiario) - parseFloat(custoDiario);
-    const horasNecessarias = meta ? (parseFloat(meta) / calc.lucroMensal) * (parseFloat(diasSemana) * 4.33) : 0;
-    
+    // Gerar análise simples
     let analiseTexto = `Com esse ritmo, você terá um lucro líquido de ${formatarMoeda(calc.lucroMensal)} por mês. `;
     
     if (calc.lucroMensal >= 3000) {
@@ -37,8 +34,9 @@ export default function Simulador() {
     }
 
     if (meta && parseFloat(meta) > calc.lucroMensal) {
-      const diasExtras = Math.ceil((parseFloat(meta) - calc.lucroMensal) / (lucroLiquido * 4.33));
-      analiseTexto += `Para atingir sua meta de ${formatarMoeda(parseFloat(meta))}, você precisaria trabalhar mais ${diasExtras} dia(s) por semana.`;
+      const lucroLiquidoDia = parseFloat(ganhoDiario) - parseFloat(custoDiario);
+      const diasExtras = Math.ceil((parseFloat(meta) - calc.lucroMensal) / (lucroLiquidoDia * 4.33));
+      analiseTexto += `Para atingir sua meta, você precisaria de mais dedicação ou otimização.`;
     } else if (meta) {
       analiseTexto += `Parabéns! Você já está superando sua meta de ${formatarMoeda(parseFloat(meta))}!`;
     }
@@ -53,18 +51,18 @@ export default function Simulador() {
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl mb-4 shadow-lg">
           <TrendingUp className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Simulador de Lucro Mensal
         </h1>
-        <p className="text-gray-600">Planeje seus ganhos e defina suas metas</p>
+        <p className="text-gray-600 dark:text-gray-300">Planeje seus ganhos e defina suas metas</p>
       </div>
 
       {/* Formulário */}
-      <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 mb-6 border border-gray-100 dark:border-gray-800">
         <div className="space-y-4">
           {/* Ganho Diário Médio */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <DollarSign className="w-4 h-4 inline mr-1" />
               Ganho Diário Médio (R$)
             </label>
@@ -74,13 +72,13 @@ export default function Simulador() {
               value={ganhoDiario}
               onChange={(e) => setGanhoDiario(e.target.value)}
               placeholder="150.00"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
             />
           </div>
 
           {/* Dias por Semana */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Calendar className="w-4 h-4 inline mr-1" />
               Dias Trabalhados por Semana
             </label>
@@ -92,7 +90,7 @@ export default function Simulador() {
                   className={`py-3 rounded-xl font-bold transition-all ${
                     diasSemana === dia.toString()
                       ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
                 >
                   {dia}
@@ -103,7 +101,7 @@ export default function Simulador() {
 
           {/* Custo Diário Médio */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Custo Diário Médio (R$)
             </label>
             <input
@@ -112,13 +110,13 @@ export default function Simulador() {
               value={custoDiario}
               onChange={(e) => setCustoDiario(e.target.value)}
               placeholder="60.00"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
             />
           </div>
 
           {/* Meta (Opcional) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <Target className="w-4 h-4 inline mr-1" />
               Meta Mensal (Opcional)
             </label>
@@ -128,7 +126,7 @@ export default function Simulador() {
               value={meta}
               onChange={(e) => setMeta(e.target.value)}
               placeholder="3000.00"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
             />
           </div>
 
@@ -145,7 +143,7 @@ export default function Simulador() {
 
       {/* Resultados */}
       {resultado && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           {/* Cards de Projeção */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg p-6">
@@ -170,37 +168,37 @@ export default function Simulador() {
           </div>
 
           {/* Análise */}
-          <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl shadow-lg p-6 border-2 border-green-200">
+          <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-2xl shadow-lg p-6 border-2 border-green-200 dark:border-green-800">
             <div className="flex items-start gap-3">
               <div className="bg-green-500 rounded-full p-2 mt-1">
                 <Target className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 mb-2">📊 Análise e Metas</h3>
-                <p className="text-gray-700 leading-relaxed">{analise}</p>
+                <h3 className="font-bold text-gray-900 dark:text-white mb-2">📊 Análise e Metas</h3>
+                <p className="text-gray-700 dark:text-gray-200 leading-relaxed">{analise}</p>
               </div>
             </div>
           </div>
 
           {/* Dicas */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="font-bold text-gray-900 mb-4">💡 Dicas para Atingir Suas Metas</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-800">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-4">💡 Dicas para Atingir Suas Metas</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
-                <span className="text-green-600 font-bold">✓</span>
-                <span className="text-gray-700">Trabalhe nos horários de pico para maximizar ganhos</span>
+                <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
+                <span className="text-gray-700 dark:text-gray-300">Trabalhe nos horários de pico para maximizar ganhos</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-green-600 font-bold">✓</span>
-                <span className="text-gray-700">Reduza custos otimizando rotas e combustível</span>
+                <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
+                <span className="text-gray-700 dark:text-gray-300">Reduza custos otimizando rotas e combustível</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-green-600 font-bold">✓</span>
-                <span className="text-gray-700">Use múltiplas plataformas para aumentar demanda</span>
+                <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
+                <span className="text-gray-700 dark:text-gray-300">Use múltiplas plataformas para aumentar demanda</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="text-green-600 font-bold">✓</span>
-                <span className="text-gray-700">Acompanhe seus resultados diariamente no Dashboard</span>
+                <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
+                <span className="text-gray-700 dark:text-gray-300">Acompanhe seus resultados diariamente no Dashboard</span>
               </li>
             </ul>
           </div>
