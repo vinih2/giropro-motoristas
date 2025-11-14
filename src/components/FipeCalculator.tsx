@@ -5,7 +5,7 @@ import { Car, TrendingDown, AlertCircle, Check, Loader2, ChevronDown } from 'luc
 import { Button } from '@/components/ui/button';
 import { formatarMoeda } from '@/lib/calculations';
 
-// Lista das principais marcas para facilitar a busca (pode ser expandida)
+// ✅ Mantendo o filtro da frota brasileira para não poluir a lista
 const MARCAS_PRINCIPAIS = [
   'Chevrolet', 'Volkswagen', 'Fiat', 'Ford', 'Toyota', 'Honda', 'Hyundai', 
   'Renault', 'Jeep', 'Nissan', 'Citroën', 'Peugeot', 'Mitsubishi', 'BMW', 
@@ -23,17 +23,19 @@ export default function FipeCalculator() {
   
   const [valorFipe, setValorFipe] = useState<number | null>(null);
   const [depreciacaoKm, setDepreciacaoKm] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  
   const [loadingModelos, setLoadingModelos] = useState(false);
   const [loadingAnos, setLoadingAnos] = useState(false);
+  const [loadingValor, setLoadingValor] = useState(false);
 
-  // 1. Carregar Marcas
+  // 1. Carregar Marcas (Parallelum API)
   useEffect(() => {
-    fetch('https://brasilapi.com.br/api/fipe/marcas/v1/carros')
+    fetch('https://parallelum.com.br/fipe/api/v1/carros/marcas')
       .then(res => res.json())
       .then(data => {
         if (!Array.isArray(data)) return;
-        // Ordena alfabeticamente e prioriza as marcas principais
+        
+        // Filtra e ordena para mostrar primeiro as comuns no Brasil
         const sorted = data.sort((a: any, b: any) => {
             const aEhPrincipal = MARCAS_PRINCIPAIS.some(p => a.nome.includes(p));
             const bEhPrincipal = MARCAS_PRINCIPAIS.some(p => b.nome.includes(p));
@@ -46,28 +48,29 @@ export default function FipeCalculator() {
       .catch(console.error);
   }, []);
 
-  // 2. Carregar Modelos
+  // 2. Carregar Modelos (Ao escolher Marca)
   useEffect(() => {
     if (!marcaSel) return;
     setLoadingModelos(true);
-    setModeloSel(''); setAnoSel(''); setValorFipe(null); // Reset
+    setModeloSel(''); setAnoSel(''); setValorFipe(null); setDepreciacaoKm(null);
     
-    fetch(`https://brasilapi.com.br/api/fipe/modelos/v1/${marcaSel}`)
+    fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${marcaSel}/modelos`)
       .then(res => res.json())
       .then(data => {
+        // A API retorna um objeto { modelos: [], anos: [] }
         setModelos(data.modelos || []);
         setLoadingModelos(false);
       })
       .catch(() => setLoadingModelos(false));
   }, [marcaSel]);
 
-  // 3. Carregar Anos
+  // 3. Carregar Anos (Ao escolher Modelo)
   useEffect(() => {
     if (!marcaSel || !modeloSel) return;
     setLoadingAnos(true);
-    setAnoSel(''); setValorFipe(null); // Reset
+    setAnoSel(''); setValorFipe(null);
 
-    fetch(`https://brasilapi.com.br/api/fipe/anos/v1/${marcaSel}/${modeloSel}`)
+    fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${marcaSel}/modelos/${modeloSel}/anos`)
       .then(res => res.json())
       .then(data => {
         setAnos(data || []);
@@ -76,15 +79,16 @@ export default function FipeCalculator() {
       .catch(() => setLoadingAnos(false));
   }, [marcaSel, modeloSel]);
 
-  // 4. Buscar Valor Final
+  // 4. Buscar Valor Final (Ao escolher Ano)
   const buscarValor = async () => {
     if (!marcaSel || !modeloSel || !anoSel) return;
-    setLoading(true);
+    setLoadingValor(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/fipe/preco/v1/${marcaSel}/${modeloSel}/${anoSel}`);
+      const res = await fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${marcaSel}/modelos/${modeloSel}/anos/${anoSel}`);
       const data = await res.json();
       
-      const valorNumerico = parseFloat(data.valor.replace('R$ ', '').replace('.', '').replace(',', '.'));
+      // Converte "R$ 50.000,00" para 50000.00
+      const valorNumerico = parseFloat(data.Valor.replace('R$ ', '').replace('.', '').replace(',', '.'));
       setValorFipe(valorNumerico);
 
       // Cálculo: 15% Depreciação Anual / 40.000 KM (Média App)
@@ -97,7 +101,7 @@ export default function FipeCalculator() {
     } catch (error) {
       console.error(error);
     } finally {
-      setLoading(false);
+      setLoadingValor(false);
     }
   };
 
@@ -108,7 +112,7 @@ export default function FipeCalculator() {
       </h3>
 
       <div className="space-y-4 mb-6">
-        {/* SELETOR NATIVO: MARCA */}
+        {/* MARCA (NATIVO) */}
         <div className="relative">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">Marca</label>
             <div className="relative">
@@ -126,17 +130,17 @@ export default function FipeCalculator() {
             </div>
         </div>
 
-        {/* SELETOR NATIVO: MODELO */}
+        {/* MODELO (NATIVO) */}
         <div className="relative">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">Modelo</label>
             <div className="relative">
                 <select 
-                    className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl py-3 px-4 pr-8 focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+                    className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl py-3 px-4 pr-8 focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     value={modeloSel}
                     onChange={(e) => setModeloSel(e.target.value)}
                     disabled={!marcaSel}
                 >
-                    <option value="">{loadingModelos ? "Carregando..." : "Selecione o modelo..."}</option>
+                    <option value="">{loadingModelos ? "Carregando modelos..." : "Selecione o modelo..."}</option>
                     {modelos.map((m) => (
                         <option key={m.codigo} value={m.codigo}>{m.nome}</option>
                     ))}
@@ -145,17 +149,17 @@ export default function FipeCalculator() {
             </div>
         </div>
 
-        {/* SELETOR NATIVO: ANO */}
+        {/* ANO (NATIVO) */}
         <div className="relative">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">Ano</label>
             <div className="relative">
                 <select 
-                    className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl py-3 px-4 pr-8 focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+                    className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl py-3 px-4 pr-8 focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     value={anoSel}
                     onChange={(e) => setAnoSel(e.target.value)}
                     disabled={!modeloSel}
                 >
-                    <option value="">{loadingAnos ? "Carregando..." : "Selecione o ano..."}</option>
+                    <option value="">{loadingAnos ? "Carregando anos..." : "Selecione o ano..."}</option>
                     {anos.map((a) => (
                         <option key={a.codigo} value={a.codigo}>{a.nome}</option>
                     ))}
@@ -167,10 +171,10 @@ export default function FipeCalculator() {
 
       <Button 
         onClick={buscarValor} 
-        disabled={!anoSel || loading} 
+        disabled={!anoSel || loadingValor} 
         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl shadow-md active:scale-95 transition-all"
       >
-        {loading ? <span className="flex items-center gap-2"><Loader2 className="animate-spin h-5 w-5" /> Calculando...</span> : 'Calcular Depreciação'}
+        {loadingValor ? <span className="flex items-center gap-2"><Loader2 className="animate-spin h-5 w-5" /> Calculando...</span> : 'Calcular Depreciação'}
       </Button>
 
       {valorFipe && depreciacaoKm && (
