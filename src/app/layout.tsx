@@ -11,6 +11,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   useEffect(() => {
+    // --- Persistência Supabase ---
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
@@ -21,6 +22,9 @@ export default function RootLayout({
       }
     );
 
+    // --- ⚡ Ativa dark mode global ---
+    document.documentElement.classList.add("dark");
+
     return () => {
       listener.subscription.unsubscribe();
     };
@@ -30,11 +34,8 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body
         className="
-          antialiased min-h-screen 
-          bg-gradient-to-br from-orange-50 via-white to-yellow-50 
-          text-gray-900
-          dark:bg-gradient-to-br dark:from-gray-900 dark:via-black dark:to-gray-950 
-          dark:text-gray-100
+          min-h-screen 
+          bg-background text-foreground
           transition-colors duration-300
         "
       >
