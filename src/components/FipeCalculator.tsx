@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatarMoeda } from '@/lib/calculations';
 
-// Lista exata de nomes retornados pela BrasilAPI para facilitar
-const MARCAS_POPULARES = [
+// Constantes: Marcas mais comuns na frota brasileira (Nomes exatos da FIPE)
+const MARCAS_BRASIL = [
   'GM - Chevrolet',
   'VW - VolksWagen',
   'Fiat',
@@ -24,12 +24,13 @@ const MARCAS_POPULARES = [
   'BMW',
   'Mercedes-Benz',
   'Audi',
-  'Kia Motors', // Ajustado
+  'Kia Motors',
   'Chery',
   'JAC',
   'Land Rover',
   'Volvo',
-  'Suzuki'
+  'Suzuki',
+  'Troller'
 ];
 
 export default function FipeCalculator() {
@@ -45,16 +46,16 @@ export default function FipeCalculator() {
   const [depreciacaoKm, setDepreciacaoKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Carregar e FILTRAR Marcas
+  // 1. Carregar Marcas
   useEffect(() => {
     fetch('https://brasilapi.com.br/api/fipe/marcas/v1/carros')
       .then(res => res.json())
       .then(data => {
         if (!Array.isArray(data)) return;
         
-        // Filtra marcas populares e ordena
+        // Filtra apenas marcas relevantes para o Brasil e ordena
         const marcasFiltradas = data
-          .filter((m: any) => MARCAS_POPULARES.includes(m.nome) || MARCAS_POPULARES.some(p => m.nome.includes(p)))
+          .filter((m: any) => MARCAS_BRASIL.includes(m.nome) || MARCAS_BRASIL.some(p => m.nome.includes(p)))
           .sort((a: any, b: any) => a.nome.localeCompare(b.nome));
         
         setMarcas(marcasFiltradas);
@@ -62,15 +63,11 @@ export default function FipeCalculator() {
       .catch(err => console.error("Erro FIPE:", err));
   }, []);
 
-  // Carregar Modelos
+  // 2. Carregar Modelos (ao selecionar marca)
   useEffect(() => {
     if (!marcaSel) return;
     setLoading(true);
-    // Resetar estados dependentes
-    setModeloSel(''); 
-    setAnoSel('');
-    setValorFipe(null);
-    setDepreciacaoKm(null);
+    setModeloSel(''); setAnoSel(''); setValorFipe(null); // Reset
     
     fetch(`https://brasilapi.com.br/api/fipe/modelos/v1/${marcaSel}`)
       .then(res => res.json())
@@ -81,12 +78,11 @@ export default function FipeCalculator() {
       .catch(() => setLoading(false));
   }, [marcaSel]);
 
-  // Carregar Anos
+  // 3. Carregar Anos (ao selecionar modelo)
   useEffect(() => {
     if (!marcaSel || !modeloSel) return;
     setLoading(true);
-    setAnoSel(''); // Resetar ano
-    setValorFipe(null);
+    setAnoSel(''); setValorFipe(null); // Reset
 
     fetch(`https://brasilapi.com.br/api/fipe/anos/v1/${marcaSel}/${modeloSel}`)
       .then(res => res.json())
@@ -97,7 +93,7 @@ export default function FipeCalculator() {
       .catch(() => setLoading(false));
   }, [marcaSel, modeloSel]);
 
-  // Buscar Valor
+  // 4. Buscar Valor Final e Calcular
   const buscarValor = async () => {
     if (!marcaSel || !modeloSel || !anoSel) return;
     setLoading(true);
@@ -105,10 +101,13 @@ export default function FipeCalculator() {
       const res = await fetch(`https://brasilapi.com.br/api/fipe/preco/v1/${marcaSel}/${modeloSel}/${anoSel}`);
       const data = await res.json();
       
+      // Limpa string "R$ 50.000,00" para number 50000.00
       const valorNumerico = parseFloat(data.valor.replace('R$ ', '').replace('.', '').replace(',', '.'));
       setValorFipe(valorNumerico);
 
-      // Cálculo Depreciação: 15% ao ano / 40.000 km
+      // CONSTANTE DE CÁLCULO:
+      // Depreciação média anual de uso intenso (App): 15%
+      // Quilometragem média anual de motorista app: 40.000 km
       const depPorKm = (valorNumerico * 0.15) / 40000;
       
       setDepreciacaoKm(depPorKm);
@@ -127,7 +126,7 @@ export default function FipeCalculator() {
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 mt-6">
       <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
-        <Car className="text-blue-600" /> Depreciação Real (FIPE)
+        <Car className="text-blue-600" /> Depreciação Real (Tabela FIPE)
       </h3>
 
       <div className="space-y-4 mb-4">
@@ -138,7 +137,7 @@ export default function FipeCalculator() {
             <SelectTrigger className="dark:bg-gray-800 dark:border-gray-700 dark:text-white">
               <SelectValue placeholder="Selecione a Marca" />
             </SelectTrigger>
-            <SelectContent className="max-h-[200px]">
+            <SelectContent className="max-h-[250px]">
               {marcas.map(m => (
                 <SelectItem key={m.codigo} value={String(m.codigo)}>
                   {m.nome}
@@ -155,7 +154,7 @@ export default function FipeCalculator() {
             <SelectTrigger className="dark:bg-gray-800 dark:border-gray-700 dark:text-white">
               <SelectValue placeholder={loading && !modelos.length && marcaSel ? "Carregando..." : "Selecione o Modelo"} />
             </SelectTrigger>
-            <SelectContent className="max-h-[200px]">
+            <SelectContent className="max-h-[250px]">
               {modelos.map(m => (
                 <SelectItem key={m.codigo} value={String(m.codigo)}>
                   {m.nome}
@@ -172,7 +171,7 @@ export default function FipeCalculator() {
             <SelectTrigger className="dark:bg-gray-800 dark:border-gray-700 dark:text-white">
               <SelectValue placeholder={loading && !anos.length && modeloSel ? "Carregando..." : "Selecione o Ano"} />
             </SelectTrigger>
-            <SelectContent className="max-h-[200px]">
+            <SelectContent className="max-h-[250px]">
               {anos.map(a => (
                 <SelectItem key={a.codigo} value={String(a.codigo)}>
                   {a.nome}
@@ -186,7 +185,7 @@ export default function FipeCalculator() {
       <Button 
         onClick={buscarValor} 
         disabled={!anoSel || loading} 
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl shadow-md"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12 rounded-xl shadow-md transition-all active:scale-95"
       >
         {loading ? 'Calculando...' : 'Calcular Depreciação'}
       </Button>
