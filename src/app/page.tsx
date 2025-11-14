@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
-import { calcularGiroDia, formatarMoeda } from '@/lib/calculations';
-import { TrendingUp, DollarSign, Navigation, Zap, AlertTriangle, Calculator, Check, X } from 'lucide-react';
+import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
+import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Calculator, Check, X } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -42,47 +42,140 @@ function DashboardContent() {
     }
   }, []);
 
+  // Salvar meta ao alterar
+  useEffect(() => {
+    if (metaDiaria && typeof window !== 'undefined') {
+      localStorage.setItem('metaDiaria', metaDiaria);
+    }
+  }, [metaDiaria]);
+
+  // Gerar alerta quando tiver resultado
+  useEffect(() => {
+    if (resultado) gerarAlerta();
+  }, [resultado]);
+
+  const gerarAlerta = async () => {
+    if (!resultado) return;
+    const metaNum = parseFloat(metaDiaria) || 0;
+    
+    try {
+      const response = await fetch('/api/generate-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: `Analise para motorista app: Ganho/h: R$ ${resultado.ganhoPorHora.toFixed(2)}, Custo/km: R$ ${custoPorKm.toFixed(2)}. Meta: R$ ${metaNum}. Gere alerta curto (max 2 linhas) com emoji.`
+        }),
+      });
+      const data = await response.json();
+      setAlerta(data.insight);
+    } catch (error) {
+      setAlerta('✅ Giro registrado! Acompanhe seus resultados.');
+    }
+  };
+
   const calcularRapido = () => {
     const v = parseFloat(quickValor);
     const k = parseFloat(quickKm);
     if (!v || !k) return;
     const lucro = v - (k * custoPorKm);
-    // Regra: Vale a pena se pagar mais que R$1.00 livre por KM
+    // Regra simples: Vale a pena se o lucro for >= R$ 1.00 por KM (ajustável)
     setQuickResultado({ lucro, valeApena: (lucro / k) >= 1.0 });
   };
 
   const handleCalcular = async () => {
     if (!ganhoBruto || !horas || !km) return alert('Preencha os campos!');
+    
     const dados = {
       plataforma,
       ganhoBruto: parseFloat(ganhoBruto),
       horasTrabalhadas: parseFloat(horas),
       kmRodados: parseFloat(km),
     };
+
     const calc = calcularGiroDia(dados, custoPorKm);
     setResultado(calc);
+    setLoading(true);
     
-    // Salvar e Gerar Insight (Resumido)
-    if (user) await supabase.from('registros').insert({ ...dados, user_id: user.id, data: new Date().toISOString(), lucro: calc.lucroFinal, custo_km: custoPorKm });
-    setInsight("Giro registrado com sucesso! Continue assim.");
+    // Salvar no Banco e Gerar Insight
+    if (user) {
+      supabase.from('registros').insert({ 
+        user_id: user.id, 
+        data: new Date().toISOString(), 
+        ...dados, 
+        custo_km: custoPorKm, 
+        lucro: calc.lucroFinal 
+      }).then(({ error }) => {
+        if (error) salvarNoLocalStorage(dados, calc);
+      });
+    } else {
+      salvarNoLocalStorage(dados, calc);
+    }
+
+    try {
+      const response = await fetch('/api/generate-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dados, resultado: calc, prompt: "Gere insight curto e motivador para este resultado." }),
+      });
+      const data = await response.json();
+      setInsight(data.insight);
+    } catch (error) {
+      setInsight('Seu giro está registrado! Continue assim.');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const salvarNoLocalStorage = (dados: any, calc: any) => {
+    try {
+      const registros = JSON.parse(localStorage.getItem('registros') || '[]');
+      registros.unshift({
+        id: Date.now(),
+        user_id: 'local',
+        data: new Date().toISOString().split('T')[0],
+        ...dados,
+        custo_km: custoPorKm,
+        lucro: calc.lucroFinal,
+      });
+      localStorage.setItem('registros', JSON.stringify(registros));
+    } catch (e) { console.error(e) }
+  };
+
+  const desempenho = resultado ? avaliarDesempenho(resultado.ganhoPorHora) : null;
   const progresso = resultado ? Math.min((resultado.lucroFinal / parseFloat(metaDiaria || '1')) * 100, 100) : 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 pb-32">
-      {/* --- META --- */}
-      <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-        <div className="flex justify-between text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
-          <span>Meta Diária</span>
-          <span>{progresso.toFixed(0)}%</span>
-        </div>
-        <Progress value={progresso} className="h-3 bg-gray-100 dark:bg-gray-800" />
-        <div className="flex justify-between text-xs text-gray-400 mt-1">
-          <span>R$ 0</span>
-          <span>{formatarMoeda(parseFloat(metaDiaria))}</span>
+      {/* --- HEADER RESTAURADO --- */}
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-2">
+          GiroPro
+        </h1>
+        <p className="text-gray-600 dark:text-gray-300 text-lg">Seu Coach Financeiro Pessoal</p>
+        
+        {/* Widget de Meta */}
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 max-w-md mx-auto">
+          <div className="flex justify-between text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
+            <span>Meta Diária</span>
+            <span>{progresso.toFixed(0)}%</span>
+          </div>
+          <Progress value={progresso} className="h-3 bg-gray-100 dark:bg-gray-800" />
+          <div className="flex justify-between text-xs text-gray-400 mt-1">
+            <span>R$ 0</span>
+            <span>{formatarMoeda(parseFloat(metaDiaria))}</span>
+          </div>
         </div>
       </div>
+
+      {/* Alerta Inteligente */}
+      {alerta && (
+        <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-4 shadow-lg animate-fade-in">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-900 dark:text-amber-100 font-medium leading-relaxed">{alerta}</p>
+          </div>
+        </div>
+      )}
 
       {/* --- FORMULÁRIO --- */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800 space-y-5">
@@ -90,10 +183,24 @@ function DashboardContent() {
           <Zap className="text-orange-500" /> Novo Registro
         </h2>
 
-        <div className="grid grid-cols-4 gap-2">
-          {plataformas.slice(0,4).map(p => (
-            <button key={p} onClick={() => setPlataforma(p)} className={`p-2 rounded-lg text-xs font-bold ${plataforma === p ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}>{p}</button>
-          ))}
+        {/* Plataformas Restauradas (Grid Completo) */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Plataforma</label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {plataformas.map((p) => (
+              <button 
+                key={p} 
+                onClick={() => setPlataforma(p)} 
+                className={`p-3 rounded-xl text-sm font-bold transition-all ${
+                  plataforma === p 
+                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 shadow-inner' 
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Inputs com Voz */}
@@ -124,8 +231,8 @@ function DashboardContent() {
           </div>
         </div>
 
-        <Button onClick={handleCalcular} className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg">
-          Calcular
+        <Button onClick={handleCalcular} className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg mt-4">
+          {loading ? 'Calculando...' : 'Calcular'}
         </Button>
       </div>
 
@@ -140,18 +247,17 @@ function DashboardContent() {
             <span className="text-sm text-blue-700 dark:text-blue-400">Ganho/Hora</span>
             <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">{formatarMoeda(resultado.ganhoPorHora)}</p>
           </div>
-          <div className="col-span-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm text-gray-600 dark:text-gray-300 italic text-center">
+          <div className="col-span-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm text-gray-600 dark:text-gray-300 italic text-center border border-gray-200 dark:border-gray-700">
             "{insight}"
           </div>
         </div>
       )}
 
       {/* --- FAB: CALCULADORA RÁPIDA --- */}
-      {/* Z-INDEX 60 para ficar acima da Navbar (que é 50) */}
       <div className="fixed bottom-24 right-4 z-[60] md:bottom-8">
         <Drawer>
           <DrawerTrigger asChild>
-            <Button className="h-16 w-16 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex flex-col items-center justify-center gap-1 border-4 border-white dark:border-gray-900">
+            <Button className="h-16 w-16 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex flex-col items-center justify-center gap-1 border-4 border-white dark:border-gray-900 transition-transform hover:scale-105 active:scale-95">
               <Calculator className="h-6 w-6" />
               <span className="text-[10px]">Rápido</span>
             </Button>
@@ -176,12 +282,12 @@ function DashboardContent() {
                 <Button onClick={calcularRapido} className="w-full h-12 text-lg">Verificar</Button>
                 
                 {quickResultado && (
-                  <div className={`p-4 rounded-xl text-center border-2 animate-scale-in ${quickResultado.valeApena ? 'bg-green-100 border-green-500 text-green-800' : 'bg-red-100 border-red-500 text-red-800'}`}>
+                  <div className={`p-4 rounded-xl text-center border-2 animate-scale-in ${quickResultado.valeApena ? 'bg-green-100 border-green-500 text-green-800 dark:bg-green-900/30 dark:text-green-200' : 'bg-red-100 border-red-500 text-red-800 dark:bg-red-900/30 dark:text-red-200'}`}>
                     <div className="flex justify-center items-center gap-2">
                         {quickResultado.valeApena ? <Check size={32}/> : <X size={32}/>}
                         <span className="text-2xl font-bold">{quickResultado.valeApena ? 'ACEITA!' : 'RECUSA!'}</span>
                     </div>
-                    <p className="mt-1 font-medium">Lucro: {formatarMoeda(quickResultado.lucro)}</p>
+                    <p className="mt-1 font-medium">Lucro estimado: {formatarMoeda(quickResultado.lucro)}</p>
                   </div>
                 )}
               </div>
