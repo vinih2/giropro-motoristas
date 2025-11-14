@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TipoVeiculo } from '@/lib/types';
 import { calcularCustoPorKm, formatarMoeda } from '@/lib/calculations';
 import { Fuel, Zap, TrendingDown, AlertCircle, Download } from 'lucide-react';
-import FipeCalculator from '@/components/FipeCalculator'; // ✅ Import
+import FipeCalculator from '@/components/FipeCalculator';
 
 export default function CustoKm() {
   const [tipoVeiculo, setTipoVeiculo] = useState<TipoVeiculo>('Carro Flex');
@@ -20,6 +20,7 @@ export default function CustoKm() {
   const buscarPrecosCombustivel = async () => {
     setLoadingAPI(true);
     try {
+      // Simulação de API (futura integração com ANP)
       await new Promise(resolve => setTimeout(resolve, 1500));
       const precosSimulados = {
         gasolina: (5.50 + Math.random() * 0.50).toFixed(2),
@@ -112,7 +113,7 @@ export default function CustoKm() {
         </div>
       )}
 
-      {/* ✅ Componente FIPE */}
+      {/* Componente FIPE com todas as correções */}
       <FipeCalculator />
     </div>
   );
