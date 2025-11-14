@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
-import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
-import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle } from 'lucide-react';
+import { calcularGiroDia, formatarMoeda } from '@/lib/calculations';
+import { TrendingUp, DollarSign, Navigation, Zap, AlertTriangle, Calculator, Check, X } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
-import VoiceInput from '@/components/VoiceInput'; // ✅ Novo Import
+import { Progress } from '@/components/ui/progress';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerTrigger, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import VoiceInput from '@/components/VoiceInput';
 
 function DashboardContent() {
   const { user } = useAuth();
@@ -15,230 +19,183 @@ function DashboardContent() {
   const [ganhoBruto, setGanhoBruto] = useState('');
   const [horas, setHoras] = useState('');
   const [km, setKm] = useState('');
-  const [metaDiaria, setMetaDiaria] = useState('');
+  const [metaDiaria, setMetaDiaria] = useState('200');
   const [resultado, setResultado] = useState<any>(null);
   const [insight, setInsight] = useState('');
   const [loading, setLoading] = useState(false);
   const [custoPorKm, setCustoPorKm] = useState(0.50);
   const [alerta, setAlerta] = useState('');
 
+  // Calculadora Rápida
+  const [quickValor, setQuickValor] = useState('');
+  const [quickKm, setQuickKm] = useState('');
+  const [quickResultado, setQuickResultado] = useState<{ lucro: number; valeApena: boolean } | null>(null);
+
   const plataformas: Plataforma[] = ['Uber', '99', 'iFood', 'Rappi', 'Shopee', 'Amazon', 'Loggi', 'Outro'];
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const custoSalvo = localStorage.getItem('custoPorKm');
-      if (custoSalvo) setCustoPorKm(parseFloat(custoSalvo));
-      
-      const metaSalva = localStorage.getItem('metaDiaria');
-      if (metaSalva) setMetaDiaria(metaSalva);
+      const custo = localStorage.getItem('custoPorKm');
+      if (custo) setCustoPorKm(parseFloat(custo));
+      const meta = localStorage.getItem('metaDiaria');
+      if (meta) setMetaDiaria(meta);
     }
   }, []);
 
-  useEffect(() => {
-    if (metaDiaria && typeof window !== 'undefined') {
-      localStorage.setItem('metaDiaria', metaDiaria);
-    }
-  }, [metaDiaria]);
-
-  useEffect(() => {
-    if (resultado) gerarAlerta();
-  }, [resultado]);
-
-  const gerarAlerta = async () => {
-    if (!resultado) return;
-    const metaNum = parseFloat(metaDiaria) || 0;
-    
-    try {
-      const response = await fetch('/api/generate-insight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: `Analise para motorista app: Ganho/h: R$ ${resultado.ganhoPorHora.toFixed(2)}, Custo/km: R$ ${custoPorKm.toFixed(2)}. Meta: R$ ${metaNum}. Gere alerta curto (max 2 linhas) com emoji.`
-        }),
-      });
-      const data = await response.json();
-      setAlerta(data.insight);
-    } catch (error) {
-      setAlerta('✅ Giro registrado! Acompanhe seus resultados.');
-    }
+  const calcularRapido = () => {
+    const v = parseFloat(quickValor);
+    const k = parseFloat(quickKm);
+    if (!v || !k) return;
+    const lucro = v - (k * custoPorKm);
+    // Regra: Vale a pena se pagar mais que R$1.00 livre por KM
+    setQuickResultado({ lucro, valeApena: (lucro / k) >= 1.0 });
   };
 
   const handleCalcular = async () => {
-    if (!ganhoBruto || !horas || !km) {
-      alert('⚠️ Por favor, preencha todos os campos antes de calcular!');
-      return;
-    }
-
+    if (!ganhoBruto || !horas || !km) return alert('Preencha os campos!');
     const dados = {
       plataforma,
       ganhoBruto: parseFloat(ganhoBruto),
       horasTrabalhadas: parseFloat(horas),
       kmRodados: parseFloat(km),
     };
-
     const calc = calcularGiroDia(dados, custoPorKm);
     setResultado(calc);
-    setLoading(true);
-
-    if (user) {
-      supabase.from('registros').insert({
-        user_id: user.id,
-        data: new Date().toISOString().split('T')[0],
-        plataforma,
-        horas: dados.horasTrabalhadas,
-        km: dados.kmRodados,
-        ganho_bruto: dados.ganhoBruto,
-        custo_km: custoPorKm,
-        lucro: calc.lucroFinal,
-      }).then(({ error }) => {
-        if (error) salvarNoLocalStorage(dados, calc);
-      });
-    } else {
-      salvarNoLocalStorage(dados, calc);
-    }
-
-    try {
-      const response = await fetch('/api/generate-insight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dados, resultado: calc, prompt: "Gere insight curto e motivador para este resultado." }),
-      });
-      const data = await response.json();
-      setInsight(data.insight);
-    } catch (error) {
-      setInsight('Seu giro está registrado! Continue assim.');
-    } finally {
-      setLoading(false);
-    }
+    
+    // Salvar e Gerar Insight (Resumido)
+    if (user) await supabase.from('registros').insert({ ...dados, user_id: user.id, data: new Date().toISOString(), lucro: calc.lucroFinal, custo_km: custoPorKm });
+    setInsight("Giro registrado com sucesso! Continue assim.");
   };
 
-  const salvarNoLocalStorage = (dados: any, calc: any) => {
-    try {
-      const registros = JSON.parse(localStorage.getItem('registros') || '[]');
-      registros.unshift({
-        id: Date.now(),
-        user_id: 'local',
-        data: new Date().toISOString().split('T')[0],
-        ...dados,
-        custo_km: custoPorKm,
-        lucro: calc.lucroFinal,
-      });
-      localStorage.setItem('registros', JSON.stringify(registros));
-    } catch (e) { console.error(e) }
-  };
-
-  const desempenho = resultado ? avaliarDesempenho(resultado.ganhoPorHora) : null;
+  const progresso = resultado ? Math.min((resultado.lucroFinal / parseFloat(metaDiaria || '1')) * 100, 100) : 0;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      <div className="text-center">
-        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-2">GiroPro</h1>
-        <p className="text-gray-600 dark:text-gray-300 text-lg">Seu Coach Financeiro Pessoal</p>
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 pb-32">
+      {/* --- META --- */}
+      <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+        <div className="flex justify-between text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
+          <span>Meta Diária</span>
+          <span>{progresso.toFixed(0)}%</span>
+        </div>
+        <Progress value={progresso} className="h-3 bg-gray-100 dark:bg-gray-800" />
+        <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <span>R$ 0</span>
+          <span>{formatarMoeda(parseFloat(metaDiaria))}</span>
+        </div>
       </div>
 
-      {alerta && (
-        <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-4 shadow-lg animate-fade-in">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-            <p className="text-amber-900 dark:text-amber-100 font-medium leading-relaxed">{alerta}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-          <Zap className="w-6 h-6 text-orange-600" />
-          Dados do Dia
+      {/* --- FORMULÁRIO --- */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800 space-y-5">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <Zap className="text-orange-500" /> Novo Registro
         </h2>
-        
-        <div className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Plataforma</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {plataformas.map((p) => (
-                <button key={p} onClick={() => setPlataforma(p)} className={`px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${plataforma === p ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-lg scale-105' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-102'}`}>{p}</button>
-              ))}
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">💰 Ganho Bruto (R$)</label>
-            <div className="flex gap-2">
-              <input type="number" step="0.01" value={ganhoBruto} onChange={(e) => setGanhoBruto(e.target.value)} placeholder="150.00" className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 transition-all" />
-              <div className="flex items-center"><VoiceInput onResult={setGanhoBruto} /></div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">⏱️ Horas</label>
-              <div className="flex gap-2">
-                <input type="number" step="0.5" value={horas} onChange={(e) => setHoras(e.target.value)} placeholder="8" className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 transition-all" />
-                <div className="flex items-center"><VoiceInput onResult={setHoras} /></div>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🛣️ KM Rodados</label>
-              <div className="flex gap-2">
-                <input type="number" step="0.1" value={km} onChange={(e) => setKm(e.target.value)} placeholder="120" className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 transition-all" />
-                <div className="flex items-center"><VoiceInput onResult={setKm} /></div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🎯 Meta do Dia (R$) - Opcional</label>
-            <input type="number" step="0.01" value={metaDiaria} onChange={(e) => setMetaDiaria(e.target.value)} placeholder="200.00" className="w-full px-5 py-4 text-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 transition-all" />
-          </div>
-
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4">
-            <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">💡 Custo por KM atual: <span className="font-bold text-lg">{formatarMoeda(custoPorKm)}</span></p>
-          </div>
-
-          <button onClick={handleCalcular} disabled={!ganhoBruto || !horas || !km || loading} className="w-full bg-gradient-to-r from-orange-500 via-yellow-500 to-orange-500 text-white font-bold py-5 text-xl rounded-xl hover:from-orange-600 hover:via-yellow-600 disabled:opacity-50 transition-all shadow-xl hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98]">
-            {loading ? 'Calculando...' : '🚀 Calcular Meu Giro'}
-          </button>
+        <div className="grid grid-cols-4 gap-2">
+          {plataformas.slice(0,4).map(p => (
+            <button key={p} onClick={() => setPlataforma(p)} className={`p-2 rounded-lg text-xs font-bold ${plataforma === p ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}>{p}</button>
+          ))}
         </div>
+
+        {/* Inputs com Voz */}
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium dark:text-gray-300">Ganho Total (R$)</label>
+            <div className="flex gap-2 mt-1">
+              <Input type="number" value={ganhoBruto} onChange={e => setGanhoBruto(e.target.value)} placeholder="0.00" className="text-lg" />
+              <VoiceInput onResult={setGanhoBruto} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium dark:text-gray-300">Horas</label>
+              <div className="flex gap-2 mt-1">
+                <Input type="number" value={horas} onChange={e => setHoras(e.target.value)} placeholder="0" />
+                <VoiceInput onResult={setHoras} />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium dark:text-gray-300">KM</label>
+              <div className="flex gap-2 mt-1">
+                <Input type="number" value={km} onChange={e => setKm(e.target.value)} placeholder="0" />
+                <VoiceInput onResult={setKm} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Button onClick={handleCalcular} className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg">
+          Calcular
+        </Button>
       </div>
 
+      {/* --- RESULTADOS --- */}
       {resultado && (
-        <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6">
-              <div className="flex items-center gap-2 mb-3"><TrendingUp className="w-7 h-7 text-white" /><span className="text-sm text-white/90 font-medium">R$/Hora</span></div>
-              <p className="text-4xl font-bold text-white mb-2">{formatarMoeda(resultado.ganhoPorHora)}</p>
-              {desempenho && <p className="text-xs font-bold px-3 py-1 rounded-full bg-white/20 inline-block text-white">{desempenho.nivel}</p>}
-            </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-xl p-6">
-              <div className="flex items-center gap-2 mb-3"><Navigation className="w-7 h-7 text-white" /><span className="text-sm text-white/90 font-medium">R$/KM</span></div>
-              <p className="text-4xl font-bold text-white">{formatarMoeda(resultado.ganhoPorKm)}</p>
-            </div>
-            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-xl p-6">
-              <div className="flex items-center gap-2 mb-3"><Zap className="w-7 h-7 text-white" /><span className="text-sm text-white/90 font-medium">Custo do Dia</span></div>
-              <p className="text-4xl font-bold text-white">{formatarMoeda(resultado.custoDiario)}</p>
-            </div>
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-xl p-6">
-              <div className="flex items-center gap-2 mb-3"><DollarSign className="w-7 h-7 text-white" /><span className="text-sm text-white/90 font-medium">Lucro Final</span></div>
-              <p className="text-4xl font-bold text-white">{formatarMoeda(resultado.lucroFinal)}</p>
-            </div>
+        <div className="grid grid-cols-2 gap-4 animate-fade-in">
+          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
+            <span className="text-sm text-green-700 dark:text-green-400">Lucro Líquido</span>
+            <p className="text-2xl font-bold text-green-800 dark:text-green-300">{formatarMoeda(resultado.lucroFinal)}</p>
+          </div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+            <span className="text-sm text-blue-700 dark:text-blue-400">Ganho/Hora</span>
+            <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">{formatarMoeda(resultado.ganhoPorHora)}</p>
+          </div>
+          <div className="col-span-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm text-gray-600 dark:text-gray-300 italic text-center">
+            "{insight}"
+          </div>
         </div>
       )}
 
-      {insight && (
-        <div className="animate-fade-in bg-gradient-to-r from-orange-100 via-yellow-100 to-orange-100 dark:from-orange-900/30 dark:via-yellow-900/30 dark:to-orange-900/30 rounded-2xl shadow-xl p-6 border-2 border-orange-300 dark:border-orange-700">
-            <div className="flex items-start gap-4">
-              <div className="bg-gradient-to-br from-orange-500 to-yellow-500 rounded-2xl p-3 shadow-lg"><Lightbulb className="w-7 h-7 text-white" /></div>
-              <p className="text-gray-800 dark:text-gray-200 text-lg leading-relaxed font-medium whitespace-pre-line flex-1">{insight}</p>
+      {/* --- FAB: CALCULADORA RÁPIDA --- */}
+      {/* Z-INDEX 60 para ficar acima da Navbar (que é 50) */}
+      <div className="fixed bottom-24 right-4 z-[60] md:bottom-8">
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button className="h-16 w-16 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex flex-col items-center justify-center gap-1 border-4 border-white dark:border-gray-900">
+              <Calculator className="h-6 w-6" />
+              <span className="text-[10px]">Rápido</span>
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="dark:bg-gray-900 dark:border-gray-800">
+            <div className="mx-auto w-full max-w-sm">
+              <DrawerHeader>
+                <DrawerTitle className="dark:text-white">Calculadora Rápida</DrawerTitle>
+                <DrawerDescription>Simule antes de aceitar a corrida.</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm dark:text-gray-300">Valor (R$)</label>
+                    <Input type="number" className="text-lg" value={quickValor} onChange={e => setQuickValor(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm dark:text-gray-300">KM Total</label>
+                    <Input type="number" className="text-lg" value={quickKm} onChange={e => setQuickKm(e.target.value)} />
+                  </div>
+                </div>
+                <Button onClick={calcularRapido} className="w-full h-12 text-lg">Verificar</Button>
+                
+                {quickResultado && (
+                  <div className={`p-4 rounded-xl text-center border-2 animate-scale-in ${quickResultado.valeApena ? 'bg-green-100 border-green-500 text-green-800' : 'bg-red-100 border-red-500 text-red-800'}`}>
+                    <div className="flex justify-center items-center gap-2">
+                        {quickResultado.valeApena ? <Check size={32}/> : <X size={32}/>}
+                        <span className="text-2xl font-bold">{quickResultado.valeApena ? 'ACEITA!' : 'RECUSA!'}</span>
+                    </div>
+                    <p className="mt-1 font-medium">Lucro: {formatarMoeda(quickResultado.lucro)}</p>
+                  </div>
+                )}
+              </div>
+              <DrawerFooter>
+                <DrawerClose asChild><Button variant="outline">Fechar</Button></DrawerClose>
+              </DrawerFooter>
             </div>
-        </div>
-      )}
+          </DrawerContent>
+        </Drawer>
+      </div>
     </div>
   );
 }
 
 export default function Dashboard() {
-  return (
-    <ProtectedRoute>
-      <DashboardContent />
-    </ProtectedRoute>
-  );
+  return <ProtectedRoute><DashboardContent /></ProtectedRoute>;
 }
