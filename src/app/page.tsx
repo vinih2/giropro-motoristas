@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
 import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
-import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Calculator, Check, X, MapPin } from 'lucide-react';
+import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Calculator, Check, X, MapPin, ChevronDown } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import VoiceInput from '@/components/VoiceInput';
 
-// Lista simplificada para não travar a tela (Capitais + Grandes Centros)
+// Lista de cidades principais
 const CIDADES_PRINCIPAIS = [
   'São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Brasília', 'Salvador', 'Fortaleza', 
   'Curitiba', 'Manaus', 'Recife', 'Porto Alegre', 'Belém', 'Goiânia', 'Guarulhos', 
@@ -25,9 +25,8 @@ const CIDADES_PRINCIPAIS = [
 function DashboardContent() {
   const { user } = useAuth();
   
-  // Estados
   const [plataforma, setPlataforma] = useState<Plataforma>('Uber');
-  const [cidade, setCidade] = useState('São Paulo'); // ✅ Novo Estado
+  const [cidade, setCidade] = useState('São Paulo');
   const [ganhoBruto, setGanhoBruto] = useState('');
   const [horas, setHoras] = useState('');
   const [km, setKm] = useState('');
@@ -45,7 +44,6 @@ function DashboardContent() {
 
   const plataformas: Plataforma[] = ['Uber', '99', 'iFood', 'Rappi', 'Shopee', 'Amazon', 'Loggi', 'Outro'];
 
-  // Carregar dados salvos
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const custo = localStorage.getItem('custoPorKm');
@@ -59,7 +57,6 @@ function DashboardContent() {
     }
   }, []);
 
-  // Salvar preferências ao mudar
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('metaDiaria', metaDiaria);
@@ -67,7 +64,6 @@ function DashboardContent() {
     }
   }, [metaDiaria, cidade]);
 
-  // Gerar alerta inteligente (com Clima) quando tiver resultado
   useEffect(() => {
     if (resultado) gerarAlerta();
   }, [resultado]);
@@ -77,11 +73,12 @@ function DashboardContent() {
     const metaNum = parseFloat(metaDiaria) || 0;
     
     try {
+      // Envia a cidade para a API considerar o clima
       const response = await fetch('/api/generate-insight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          cidade, // ✅ Enviando a cidade para a API de Clima
+          cidade, 
           prompt: `Analise para motorista em ${cidade}: Ganho/h: R$ ${resultado.ganhoPorHora.toFixed(2)}, Custo/km: R$ ${custoPorKm.toFixed(2)}. Meta: R$ ${metaNum}. Gere alerta curto (max 2 linhas) com emoji.`
         }),
       });
@@ -114,7 +111,6 @@ function DashboardContent() {
     setResultado(calc);
     setLoading(true);
     
-    // Salvar no Supabase
     if (user) {
       supabase.from('registros').insert({ 
         user_id: user.id, 
@@ -129,7 +125,6 @@ function DashboardContent() {
       salvarNoLocalStorage(dados, calc);
     }
 
-    // Gerar Insight com Clima
     try {
       const response = await fetch('/api/generate-insight', {
         method: 'POST',
@@ -137,7 +132,7 @@ function DashboardContent() {
         body: JSON.stringify({ 
             dados, 
             resultado: calc, 
-            cidade, // ✅ Enviando cidade
+            cidade, 
             prompt: "Gere insight curto e motivador para este resultado considerando o clima atual." 
         }),
       });
@@ -169,26 +164,38 @@ function DashboardContent() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 pb-32">
-      {/* --- HEADER --- */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-2">
-          GiroPro
-        </h1>
+      {/* --- HEADER MELHORADO --- */}
+      <div className="text-center space-y-6">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-1">
+            GiroPro
+          </h1>
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+            Coach Financeiro
+          </p>
+        </div>
         
-        {/* Seletor de Cidade (Nativo para não travar) */}
-        <div className="flex justify-center items-center gap-2 mb-2">
-            <MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            <select 
-                value={cidade}
-                onChange={(e) => setCidade(e.target.value)}
-                className="bg-transparent text-gray-700 dark:text-gray-200 font-medium text-sm border-none outline-none cursor-pointer hover:underline appearance-none text-center"
-            >
-                {CIDADES_PRINCIPAIS.map(c => <option key={c} value={c} className="text-black">{c}</option>)}
-            </select>
+        {/* --- SELETOR DE CIDADE (DESIGN CÁPSULA) --- */}
+        <div className="flex justify-center">
+          <div className="relative inline-flex items-center bg-white dark:bg-gray-800 rounded-full px-4 py-2 shadow-sm border border-gray-200 dark:border-gray-700 transition-all active:scale-95 hover:border-orange-300 dark:hover:border-orange-700 group">
+            <MapPin className="w-4 h-4 text-orange-500 mr-2 group-hover:animate-bounce" />
+            
+            <div className="relative">
+              <select 
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  className="appearance-none bg-transparent text-gray-700 dark:text-gray-200 font-semibold text-sm outline-none cursor-pointer pr-6 text-center"
+              >
+                  {CIDADES_PRINCIPAIS.map(c => <option key={c} value={c} className="text-black bg-white dark:bg-gray-900 dark:text-white">{c}</option>)}
+              </select>
+              {/* Seta customizada */}
+              <ChevronDown className="w-4 h-4 text-gray-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
         </div>
 
         {/* Widget de Meta */}
-        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 max-w-md mx-auto">
+        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 max-w-md mx-auto mt-4">
           <div className="flex justify-between text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
             <span>Meta Diária</span>
             <span>{progresso.toFixed(0)}%</span>
@@ -217,6 +224,7 @@ function DashboardContent() {
           <Zap className="text-orange-500" /> Novo Registro
         </h2>
 
+        {/* Grid de Plataformas */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Plataforma</label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -236,6 +244,7 @@ function DashboardContent() {
           </div>
         </div>
 
+        {/* Inputs com Voz */}
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium dark:text-gray-300">Ganho Total (R$)</label>
@@ -268,7 +277,7 @@ function DashboardContent() {
         </Button>
       </div>
 
-      {/* --- RESULTADOS --- */}
+      {/* Resultados */}
       {resultado && (
         <div className="grid grid-cols-2 gap-4 animate-fade-in">
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
