@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { TipoVeiculo } from '@/lib/types';
 import { calcularCustoPorKm, formatarMoeda } from '@/lib/calculations';
 import { Fuel, Zap, TrendingDown, AlertCircle, Download } from 'lucide-react';
-import FipeCalculator from '@/components/FipeCalculator'; // ✅ Importação adicionada
+import FipeCalculator from '@/components/FipeCalculator'; // ✅ Import
 
 export default function CustoKm() {
   const [tipoVeiculo, setTipoVeiculo] = useState<TipoVeiculo>('Carro Flex');
@@ -20,7 +20,6 @@ export default function CustoKm() {
   const buscarPrecosCombustivel = async () => {
     setLoadingAPI(true);
     try {
-      // Simulação de API
       await new Promise(resolve => setTimeout(resolve, 1500));
       const precosSimulados = {
         gasolina: (5.50 + Math.random() * 0.50).toFixed(2),
@@ -52,10 +51,7 @@ export default function CustoKm() {
     const p = parseFloat(preco);
     const k = parseFloat(km || '0');
 
-    if (!c || !p) {
-      alert('⚠️ Preencha consumo e preço!');
-      return;
-    }
+    if (!c || !p) return alert('⚠️ Preencha consumo e preço!');
 
     const calc = calcularCustoPorKm({
       tipoVeiculo,
@@ -83,7 +79,7 @@ export default function CustoKm() {
           <Fuel className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Calculadora de Custo por KM</h1>
-        <p className="text-gray-600 dark:text-gray-300">Descubra quanto você gasta para rodar</p>
+        <p className="text-gray-600 dark:text-gray-300">Combustível + Depreciação</p>
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800">
@@ -116,7 +112,7 @@ export default function CustoKm() {
         </div>
       )}
 
-      {/* ✅ Aqui é onde a tabela FIPE será acessada */}
+      {/* ✅ Componente FIPE */}
       <FipeCalculator />
     </div>
   );
