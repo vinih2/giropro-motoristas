@@ -2,27 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
-import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
-import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Calculator, Check, X, Plus, RotateCcw, Pencil, Save } from 'lucide-react';
+import { calcularGiroDia, formatarMoeda } from '@/lib/calculations';
+import { 
+  TrendingUp, Navigation, Zap, Lightbulb, Calculator, 
+  Plus, RotateCcw, Pencil, Save, Wallet, Smartphone, Banknote 
+} from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Progress } from '@/components/ui/progress';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerTrigger, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerTrigger } from '@/components/ui/drawer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from "@/hooks/use-toast"; // Importando notificações
+import { CurrencyInput } from '@/components/ui/currency-input'; // Importando componente novo
+import { useToast } from "@/hooks/use-toast";
 
 function DashboardContent() {
   const { user } = useAuth();
-  const { toast } = useToast(); // Hook de notificação
+  const { toast } = useToast();
   
   // --- Estados ---
   const [plataforma, setPlataforma] = useState<Plataforma>('Uber');
   
   // Acumuladores do dia
   const [ganhoBruto, setGanhoBruto] = useState(0);
+  const [ganhoDinheiro, setGanhoDinheiro] = useState(0); // Novo: Controle de caixa
   const [horas, setHoras] = useState(0);
   const [km, setKm] = useState(0);
   
@@ -31,14 +36,14 @@ function DashboardContent() {
   const [resultado, setResultado] = useState<any>(null);
   const [insight, setInsight] = useState('');
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false); // Novo estado para salvamento
+  const [saving, setSaving] = useState(false);
   const [custoPorKm, setCustoPorKm] = useState(0.50);
-  const [alerta, setAlerta] = useState('');
 
   // Estados Temporários (Inputs)
   const [addValor, setAddValor] = useState('');
   const [addKm, setAddKm] = useState('');
   const [addHoras, setAddHoras] = useState('');
+  const [isDinheiro, setIsDinheiro] = useState(false); // Toggle Dinheiro na gaveta
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   // Calculadora Rápida
@@ -65,31 +70,28 @@ function DashboardContent() {
       const savedDay = localStorage.getItem('giropro_current_day');
       if (savedDay) {
         const data = JSON.parse(savedDay);
-        const hoje = new Date().toDateString();
-        // Só restaura se for do mesmo dia (opcional: remova o if se quiser persistir entre dias)
-        // if (data.date === hoje) { 
-            setGanhoBruto(parseFloat(data.ganho || 0));
-            setHoras(parseFloat(data.horas || 0));
-            setKm(parseFloat(data.km || 0));
-            if (data.plataforma) setPlataforma(data.plataforma);
-        // }
+        setGanhoBruto(parseFloat(data.ganho || 0));
+        setGanhoDinheiro(parseFloat(data.ganhoDinheiro || 0));
+        setHoras(parseFloat(data.horas || 0));
+        setKm(parseFloat(data.km || 0));
+        if (data.plataforma) setPlataforma(data.plataforma);
       }
     }
   }, []);
 
-  // 2. Salvar automático no localStorage (Backup local)
+  // 2. Salvar automático no localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const dataToSave = {
             date: new Date().toDateString(),
             ganho: ganhoBruto,
+            ganhoDinheiro: ganhoDinheiro,
             horas: horas,
             km: km,
             plataforma: plataforma
         };
         localStorage.setItem('giropro_current_day', JSON.stringify(dataToSave));
         
-        // Recalcula resultados em tempo real para exibir na tela
         if (ganhoBruto > 0 || km > 0) {
             const dados = {
                 plataforma,
@@ -103,7 +105,7 @@ function DashboardContent() {
             setResultado(null);
         }
     }
-  }, [ganhoBruto, horas, km, custoPorKm, plataforma]);
+  }, [ganhoBruto, ganhoDinheiro, horas, km, custoPorKm, plataforma]);
 
   // --- AÇÕES ---
 
@@ -113,17 +115,23 @@ function DashboardContent() {
     const h = parseFloat(addHoras) || 0;
 
     setGanhoBruto(prev => prev + v);
+    if (isDinheiro) {
+        setGanhoDinheiro(prev => prev + v);
+    }
     setKm(prev => prev + k);
     setHoras(prev => prev + h);
 
+    // Limpar
     setAddValor('');
     setAddKm('');
     setAddHoras('');
+    setIsDinheiro(false);
     setIsAddOpen(false);
     
     toast({
       title: "Corrida adicionada! 🚗",
-      description: `+ ${formatarMoeda(v)} somados ao seu dia.`,
+      description: `+ ${formatarMoeda(v)} (${isDinheiro ? 'Dinheiro' : 'App'})`,
+      className: "bg-green-600 text-white border-none"
     });
   };
 
@@ -136,67 +144,42 @@ function DashboardContent() {
 
     setSaving(true);
 
-    // Recalcula final
-    const dadosFinais = {
-        plataforma,
-        ganhoBruto,
-        horasTrabalhadas: horas || 0.1,
-        kmRodados: km || 0.1,
-    };
+    const dadosFinais = { plataforma, ganhoBruto, horasTrabalhadas: horas || 0.1, kmRodados: km || 0.1 };
     const calcFinal = calcularGiroDia(dadosFinais, custoPorKm);
 
-    // 1. Salvar no Supabase
     if (user) {
-        const { error } = await supabase.from('registros').insert({
+        await supabase.from('registros').insert({
             user_id: user.id,
-            data: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+            data: new Date().toISOString().split('T')[0],
             plataforma,
-            horas: horas,
-            km: km,
-            ganho_bruto: ganhoBruto,
-            custo_km: custoPorKm,
-            lucro: calcFinal.lucroFinal,
+            horas, km, ganho_bruto: ganhoBruto, custo_km: custoPorKm, lucro: calcFinal.lucroFinal,
             created_at: new Date().toISOString()
         });
-
-        if (error) {
-            console.error(error);
-            toast({ variant: "destructive", title: "Erro ao salvar", description: "Tente novamente." });
-            setSaving(false);
-            return;
-        }
     }
 
-    // 2. Backup no LocalStorage (Histórico Offline)
+    // Backup Local
     const historicoLocal = JSON.parse(localStorage.getItem('registros') || '[]');
     historicoLocal.unshift({
         id: Date.now(),
         user_id: user?.id || 'local',
         data: new Date().toISOString().split('T')[0],
-        plataforma,
-        horas, km, ganho_bruto: ganhoBruto, custo_km: custoPorKm, lucro: calcFinal.lucroFinal
+        plataforma, horas, km, ganho_bruto: ganhoBruto, custo_km: custoPorKm, lucro: calcFinal.lucroFinal
     });
     localStorage.setItem('registros', JSON.stringify(historicoLocal));
 
-    // 3. Limpar dia atual
+    // Reset
     setGanhoBruto(0);
+    setGanhoDinheiro(0);
     setHoras(0);
     setKm(0);
     setResultado(null);
     setInsight('');
     localStorage.removeItem('giropro_current_day');
 
-    toast({
-        title: "Dia Finalizado! 🎉",
-        description: "Seus dados foram salvos no Histórico.",
-        className: "bg-green-500 text-white border-none"
-    });
-    
+    toast({ title: "Dia Finalizado! 🎉", description: "Dados salvos no Histórico.", className: "bg-blue-600 text-white border-none" });
     setSaving(false);
   };
 
-  // --- Outras Funções ---
-  
   const handleSalvarMeta = () => {
       setMetaDiaria(tempMeta);
       localStorage.setItem('metaDiaria', tempMeta);
@@ -239,18 +222,19 @@ function DashboardContent() {
         const data = await response.json();
         setInsight(data.insight);
     } catch (e) {
-        setInsight('Erro ao conectar com o coach. Tente novamente.');
+        setInsight('Erro ao conectar com o coach.');
     } finally {
         setLoading(false);
     }
   };
 
   const progressoMeta = Math.min((ganhoBruto / parseFloat(metaDiaria || '1')) * 100, 100);
+  const ganhoApp = ganhoBruto - ganhoDinheiro;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 relative pb-24">
       
-      {/* HEADER & META WIDGET */}
+      {/* HEADER & META */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent">
           GiroPro
@@ -258,24 +242,24 @@ function DashboardContent() {
         
         <div className="bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 max-w-md mx-auto relative">
           <div className="flex justify-between text-sm font-medium mb-2 text-gray-600 dark:text-gray-300">
-            <span>Meta do Dia</span>
+            <span>Progresso da Meta</span>
             <span className="text-green-600 dark:text-green-400 font-bold">{progressoMeta.toFixed(0)}%</span>
           </div>
           <Progress value={progressoMeta} className="h-3" />
           <div className="flex justify-between text-xs text-gray-400 mt-2 items-center">
-            <span className="font-mono text-lg text-gray-800 dark:text-white font-bold">R$ {ganhoBruto.toFixed(2)}</span>
+            <span className="font-mono text-lg text-gray-800 dark:text-white font-bold">{formatarMoeda(ganhoBruto)}</span>
             
             <Dialog open={isMetaOpen} onOpenChange={setIsMetaOpen}>
                 <DialogTrigger asChild>
                     <button className="flex items-center gap-1 hover:text-orange-500 transition" onClick={() => setTempMeta(metaDiaria)}>
-                        <span>Alvo: R$ {metaDiaria}</span>
+                        <span>Meta: {formatarMoeda(parseFloat(metaDiaria))}</span>
                         <Pencil size={12} />
                     </button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Definir Meta Diária</DialogTitle></DialogHeader>
-                    <Input type="number" value={tempMeta} onChange={e => setTempMeta(e.target.value)} placeholder="Ex: 300.00" />
-                    <DialogFooter><Button onClick={handleSalvarMeta}>Salvar</Button></DialogFooter>
+                    <CurrencyInput value={tempMeta} onChange={setTempMeta} placeholder="R$ 300,00" className="text-xl" />
+                    <DialogFooter><Button onClick={handleSalvarMeta}>Salvar Meta</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
           </div>
@@ -286,9 +270,8 @@ function DashboardContent() {
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800">
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Zap className="w-5 h-5 text-orange-600" /> Resumo Dinâmico
+                <Zap className="w-5 h-5 text-orange-600" /> Giro em Tempo Real
             </h2>
-            {/* Seletor de Plataforma Principal do Dia */}
             <select 
                 value={plataforma} 
                 onChange={(e) => setPlataforma(e.target.value as Plataforma)}
@@ -298,27 +281,38 @@ function DashboardContent() {
             </select>
         </div>
 
-        {/* Cards Resumo */}
-        <div className="grid grid-cols-3 gap-2 mb-6 text-center">
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Ganhos</p>
-                <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatarMoeda(ganhoBruto)}</p>
+        {/* Cards Resumo - AGORA COM CASH CONTROL */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 flex flex-col items-center justify-center">
+                <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 uppercase font-bold">
+                    <Smartphone size={12} /> App (Receber)
+                </span>
+                <p className="text-lg font-bold text-blue-700 dark:text-blue-300">{formatarMoeda(ganhoApp)}</p>
             </div>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Horas</p>
-                <p className="text-lg font-bold text-gray-800 dark:text-white">{horas}h</p>
-            </div>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">KM</p>
-                <p className="text-lg font-bold text-gray-800 dark:text-white">{km}km</p>
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800 flex flex-col items-center justify-center">
+                <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 uppercase font-bold">
+                    <Wallet size={12} /> Em Mãos
+                </span>
+                <p className="text-lg font-bold text-green-700 dark:text-green-300">{formatarMoeda(ganhoDinheiro)}</p>
             </div>
         </div>
 
-        {/* Botão Principal de Ação */}
+        <div className="grid grid-cols-2 gap-2 mb-6 text-center">
+            <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Horas</p>
+                <p className="text-base font-bold text-gray-800 dark:text-white">{horas}h</p>
+            </div>
+            <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-[10px] text-gray-500 uppercase font-bold">KM</p>
+                <p className="text-base font-bold text-gray-800 dark:text-white">{km}km</p>
+            </div>
+        </div>
+
+        {/* Botão Adicionar Corrida */}
         <div className="flex gap-3">
             <Drawer open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DrawerTrigger asChild>
-                    <Button className="flex-1 h-14 text-lg bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg shadow-orange-200 dark:shadow-none animate-pulse-slow">
+                    <Button className="flex-1 h-14 text-lg bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg animate-pulse-slow">
                         <Plus className="mr-2 h-6 w-6" /> Adicionar Corrida
                     </Button>
                 </DrawerTrigger>
@@ -326,39 +320,60 @@ function DashboardContent() {
                     <div className="mx-auto w-full max-w-sm p-4 pb-8">
                         <DrawerHeader>
                             <DrawerTitle>Adicionar Corrida</DrawerTitle>
-                            <DrawerDescription>Valores serão somados ao total.</DrawerDescription>
+                            <DrawerDescription>Some os valores ao seu dia.</DrawerDescription>
                         </DrawerHeader>
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium mb-1 block">Valor (R$)</label>
-                                    <Input type="number" value={addValor} onChange={e => setAddValor(e.target.value)} className="text-lg" placeholder="0.00" autoFocus />
+                                    <CurrencyInput value={addValor} onChange={setAddValor} className="text-lg" placeholder="0,00" autoFocus />
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium mb-1 block">KM</label>
                                     <Input type="number" value={addKm} onChange={e => setAddKm(e.target.value)} className="text-lg" placeholder="0" />
                                 </div>
                             </div>
+                            
+                            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center gap-2">
+                                    <Banknote className={`w-5 h-5 ${isDinheiro ? 'text-green-600' : 'text-gray-400'}`} />
+                                    <span className="text-sm font-medium">Pagamento em Dinheiro?</span>
+                                </div>
+                                <Button 
+                                    variant={isDinheiro ? "default" : "outline"} 
+                                    size="sm"
+                                    onClick={() => setIsDinheiro(!isDinheiro)}
+                                    className={isDinheiro ? "bg-green-600 hover:bg-green-700" : ""}
+                                >
+                                    {isDinheiro ? "SIM" : "NÃO"}
+                                </Button>
+                            </div>
+
                             <div>
-                                <label className="text-sm font-medium mb-1 block">Tempo (Horas - ex: 0.5)</label>
+                                <label className="text-sm font-medium mb-1 block">Tempo (Horas - opcional)</label>
                                 <Input type="number" value={addHoras} onChange={e => setAddHoras(e.target.value)} placeholder="0.0" />
                             </div>
-                            <Button onClick={handleAdicionarCorrida} className="w-full h-12 text-lg bg-green-600 hover:bg-green-700 text-white">Confirmar</Button>
+                            <Button onClick={handleAdicionarCorrida} className="w-full h-12 text-lg bg-green-600 hover:bg-green-700 text-white">
+                                Confirmar {formatarMoeda(parseFloat(addValor || '0'))}
+                            </Button>
                         </div>
                     </div>
                 </DrawerContent>
             </Drawer>
         </div>
         
-        {/* Botões Secundários */}
         <div className="grid grid-cols-2 gap-3 mt-4">
-             <Button variant="outline" onClick={gerarAnaliseCoach} disabled={loading || !resultado} className="border-orange-200 text-orange-700 hover:bg-orange-50 dark:border-orange-900 dark:text-orange-400 dark:hover:bg-orange-900/20 h-12">
+             <Button variant="outline" onClick={gerarAnaliseCoach} disabled={loading || !resultado} className="h-12 border-orange-200 text-orange-700 dark:border-orange-900 dark:text-orange-400">
                 {loading ? '...' : '🤖 Coach'}
             </Button>
-            <Button variant="secondary" onClick={handleFinalizarDia} disabled={saving} className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 h-12 border border-gray-200 dark:border-gray-700">
-                <Save size={18} className="mr-2" /> {saving ? 'Salvando...' : 'Encerrar Dia'}
+            <Button variant="secondary" onClick={handleNovoDia} className="h-12 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                <RotateCcw size={18} className="mr-2" /> Novo Dia
             </Button>
         </div>
+        
+        <Button variant="secondary" onClick={handleFinalizarDia} disabled={saving} className="w-full mt-3 h-12 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+            <Save size={18} className="mr-2" /> {saving ? 'Salvando...' : 'Encerrar Expediente (Salvar)'}
+        </Button>
 
         {/* Insight IA */}
         {insight && (
@@ -367,7 +382,6 @@ function DashboardContent() {
             </div>
         )}
         
-        {/* Resultados Calculados */}
         {resultado && (
             <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
                 <div className="flex justify-between items-center">
@@ -386,7 +400,7 @@ function DashboardContent() {
         )}
       </div>
 
-      {/* FAB - Calculadora Rápida (Drawer) */}
+      {/* FAB - Calculadora Rápida */}
       <div className="fixed bottom-24 right-4 z-40 md:bottom-8">
         <Drawer open={isCalcOpen} onOpenChange={setIsCalcOpen}>
           <DrawerTrigger asChild>
@@ -404,7 +418,7 @@ function DashboardContent() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Valor (R$)</label>
-                    <Input type="number" className="text-lg" value={quickValor} onChange={(e) => setQuickValor(e.target.value)} />
+                    <CurrencyInput value={quickValor} onChange={setQuickValor} className="text-lg" placeholder="0,00" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">KM Total</label>
