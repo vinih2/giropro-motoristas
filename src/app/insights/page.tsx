@@ -3,14 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
 import { Lightbulb, MapPin, TrendingUp, Zap, Target, CloudRain, Sun, Cloud } from 'lucide-react';
-import dynamic from 'next/dynamic';
 
-// 👇 ESSA PARTE É CRUCIAL PARA O MAPA APARECER
-const MapWidget = dynamic(() => import('@/components/MapWidget'), { 
-  ssr: false,
-  loading: () => <div className="h-72 w-full bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
-});
-
+// Cidades e Turnos (Mantidos)
 const CIDADES_BRASIL = [
   'São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Brasília', 'Salvador', 'Fortaleza', 
   'Curitiba', 'Manaus', 'Recife', 'Porto Alegre', 'Belém', 'Goiânia', 'Guarulhos', 
@@ -36,13 +30,17 @@ export default function Insights() {
   const [insightRapido, setInsightRapido] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Estado do Clima
   const [clima, setClima] = useState<any>(null);
 
+  // Busca Clima ao mudar cidade
   useEffect(() => {
     if (cidade) {
       fetch(`/api/weather?cidade=${cidade}`)
         .then(res => res.json())
-        .then(data => { if (!data.error) setClima(data); })
+        .then(data => {
+          if (!data.error) setClima(data);
+        })
         .catch(err => console.error("Erro clima:", err));
     }
   }, [cidade]);
@@ -75,11 +73,17 @@ export default function Insights() {
     }
   };
 
+  // Estilo do Banner de Clima
   const getClimaStyle = () => {
     if (!clima) return { bg: 'from-gray-500 to-gray-700', icon: <Cloud />, texto: 'Aguardando cidade...' };
+    
     const main = clima.principal;
-    if (['Rain', 'Drizzle', 'Thunderstorm'].includes(main)) return { bg: 'from-blue-600 to-indigo-700', icon: <CloudRain />, texto: 'Chuva detectada! Dinâmica deve subir.' };
-    if (main === 'Clear') return { bg: 'from-orange-400 to-amber-500', icon: <Sun />, texto: 'Céu limpo. Bom para rodar tranquilo.' };
+    if (['Rain', 'Drizzle', 'Thunderstorm'].includes(main)) {
+      return { bg: 'from-blue-600 to-indigo-700', icon: <CloudRain />, texto: 'Chuva detectada! Dinâmica deve subir.' };
+    }
+    if (main === 'Clear') {
+      return { bg: 'from-orange-400 to-amber-500', icon: <Sun />, texto: 'Céu limpo. Bom para rodar tranquilo.' };
+    }
     return { bg: 'from-gray-400 to-slate-500', icon: <Cloud />, texto: 'Nublado. Movimento constante.' };
   };
 
@@ -94,7 +98,7 @@ export default function Insights() {
         <p className="text-gray-600 dark:text-gray-300 text-lg">Estratégia baseada em dados reais</p>
       </div>
 
-      {/* WIDGET CLIMA */}
+      {/* WIDGET DE CLIMA (Sem Mapa) */}
       <div className={`rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all duration-500 bg-gradient-to-r ${estiloClima.bg}`}>
         <div className="relative z-10 flex items-center justify-between">
             <div>
@@ -106,26 +110,24 @@ export default function Insights() {
                 <p className="mt-2 text-white/90 font-medium text-sm md:text-base">
                     {clima ? `${clima.descricao} em ${cidade}` : 'Selecione uma cidade abaixo'}
                 </p>
-                {clima && <p className="mt-1 text-xs bg-black/20 inline-block px-2 py-1 rounded-lg">💡 {estiloClima.texto}</p>}
+                {clima && <p className="mt-1 text-xs bg-black/20 inline-block px-2 py-1 rounded-lg">
+                    💡 {estiloClima.texto}
+                </p>}
             </div>
-            <div className="absolute -right-6 -bottom-10 opacity-20 transform scale-150">{estiloClima.icon}</div>
+            {/* Ícone Decorativo */}
+            <div className="absolute -right-6 -bottom-10 opacity-20 transform scale-150">
+                {estiloClima.icon}
+            </div>
         </div>
       </div>
 
-      {/* ✅ MAPA: SÓ APARECE SE TIVER CIDADE SELECIONADA */}
-      {cidade && (
-        <div className="animate-fade-in">
-           <MapWidget cidade={cidade} />
-        </div>
-      )}
-
-      {/* CONFIGURADOR */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
           <Target className="w-6 h-6 text-purple-600" /> Configurar Rota
         </h2>
         
         <div className="space-y-5">
+          {/* Seletor de Cidade */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
               <MapPin className="w-4 h-4 inline mr-1" /> Sua Cidade
@@ -142,6 +144,7 @@ export default function Insights() {
             </select>
           </div>
 
+          {/* Plataforma */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
               <TrendingUp className="w-4 h-4 inline mr-1" /> Plataforma
@@ -163,6 +166,7 @@ export default function Insights() {
             </div>
           </div>
 
+          {/* Botão */}
           <button
             onClick={handleGerar}
             disabled={!cidade || loading}
@@ -173,6 +177,7 @@ export default function Insights() {
         </div>
       </div>
 
+      {/* Resultado */}
       {insightRapido && (
         <div className="animate-fade-in bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-purple-900/30 rounded-2xl shadow-xl p-6 border-2 border-purple-300 dark:border-purple-700">
           <div className="flex items-start gap-4">
