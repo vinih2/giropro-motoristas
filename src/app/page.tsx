@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
 import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
 import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb } from 'lucide-react';
@@ -13,20 +13,47 @@ export default function Dashboard() {
   const [resultado, setResultado] = useState<any>(null);
   const [insight, setInsight] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Custo padrão por km (pode ser atualizado pela tela de custo)
-  const custoPorKm = typeof window !== 'undefined' 
-    ? parseFloat(localStorage.getItem('custoPorKm') || '0.50')
-    : 0.50;
+  const [custoPorKm, setCustoPorKm] = useState(0.50);
 
   const plataformas: Plataforma[] = ['Uber', '99', 'iFood', 'Rappi', 'Shopee', 'Amazon', 'Loggi', 'Outro'];
 
+  // Carregar custo por km do localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const custoSalvo = localStorage.getItem('custoPorKm');
+      if (custoSalvo) {
+        setCustoPorKm(parseFloat(custoSalvo));
+      }
+    }
+  }, []);
+
   const handleCalcular = async () => {
+    // Validação de campos
+    if (!ganhoBruto || !horas || !km) {
+      alert('⚠️ Por favor, preencha todos os campos antes de calcular!');
+      return;
+    }
+
+    const ganhoBrutoNum = parseFloat(ganhoBruto);
+    const horasNum = parseFloat(horas);
+    const kmNum = parseFloat(km);
+
+    // Validação de valores
+    if (isNaN(ganhoBrutoNum) || isNaN(horasNum) || isNaN(kmNum)) {
+      alert('⚠️ Por favor, insira valores numéricos válidos!');
+      return;
+    }
+
+    if (ganhoBrutoNum <= 0 || horasNum <= 0 || kmNum <= 0) {
+      alert('⚠️ Os valores devem ser maiores que zero!');
+      return;
+    }
+
     const dados = {
       plataforma,
-      ganhoBruto: parseFloat(ganhoBruto),
-      horasTrabalhadas: parseFloat(horas),
-      kmRodados: parseFloat(km),
+      ganhoBruto: ganhoBrutoNum,
+      horasTrabalhadas: horasNum,
+      kmRodados: kmNum,
     };
 
     const calc = calcularGiroDia(dados, custoPorKm);
@@ -38,7 +65,26 @@ export default function Dashboard() {
       const response = await fetch('/api/generate-insight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dados, resultado: calc }),
+        body: JSON.stringify({ 
+          dados, 
+          resultado: calc,
+          prompt: `Você é um coach financeiro para motoristas de aplicativo no Brasil. Analise o giro do dia e forneça:
+
+1. Avaliação do giro (Excelente/Bom/Médio/Fraco) baseado em R$ ${calc.ganhoPorHora.toFixed(2)}/hora
+2. Uma dica prática e objetiva para melhorar o resultado amanhã
+3. Sugestão de melhor horário para trabalhar
+4. Uma frase motivacional curta e brasileira
+
+Dados do dia:
+- Plataforma: ${plataforma}
+- Ganho por hora: R$ ${calc.ganhoPorHora.toFixed(2)}
+- Ganho por km: R$ ${calc.ganhoPorKm.toFixed(2)}
+- Lucro final: R$ ${calc.lucroFinal.toFixed(2)}
+- Horas trabalhadas: ${horasNum}h
+- KM rodados: ${kmNum}km
+
+Seja direto, amigável e use linguagem brasileira. Máximo 4 linhas.`
+        }),
       });
       
       const data = await response.json();
@@ -73,7 +119,7 @@ export default function Dashboard() {
             <select
               value={plataforma}
               onChange={(e) => setPlataforma(e.target.value as Plataforma)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
             >
               {plataformas.map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -92,7 +138,7 @@ export default function Dashboard() {
               value={ganhoBruto}
               onChange={(e) => setGanhoBruto(e.target.value)}
               placeholder="150.00"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
             />
           </div>
 
@@ -108,7 +154,7 @@ export default function Dashboard() {
                 value={horas}
                 onChange={(e) => setHoras(e.target.value)}
                 placeholder="8"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
               />
             </div>
             <div>
@@ -121,18 +167,26 @@ export default function Dashboard() {
                 value={km}
                 onChange={(e) => setKm(e.target.value)}
                 placeholder="120"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
               />
             </div>
+          </div>
+
+          {/* Info sobre custo por km */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+            <p className="text-sm text-blue-800">
+              💡 Custo por KM atual: <span className="font-bold">{formatarMoeda(custoPorKm)}</span>
+              {custoPorKm === 0.50 && ' (padrão - calcule seu custo real na aba "Custo por KM")'}
+            </p>
           </div>
 
           {/* Botão */}
           <button
             onClick={handleCalcular}
-            disabled={!ganhoBruto || !horas || !km}
-            className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold py-4 rounded-xl hover:from-orange-600 hover:to-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+            disabled={!ganhoBruto || !horas || !km || loading}
+            className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-bold py-4 text-lg rounded-xl hover:from-orange-600 hover:to-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
           >
-            Calcular Meu Giro
+            {loading ? 'Calculando...' : 'Calcular Meu Giro'}
           </button>
         </div>
       </div>

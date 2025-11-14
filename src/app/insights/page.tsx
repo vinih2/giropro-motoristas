@@ -8,54 +8,61 @@ export default function Insights() {
   const [cidade, setCidade] = useState('');
   const [plataforma, setPlataforma] = useState<Plataforma>('Uber');
   const [horario, setHorario] = useState('');
-  const [insights, setInsights] = useState<string[]>([]);
+  const [insights, setInsights] = useState('');
   const [loading, setLoading] = useState(false);
 
   const plataformas: Plataforma[] = ['Uber', '99', 'iFood', 'Rappi', 'Shopee', 'Amazon', 'Loggi', 'Outro'];
 
   const handleGerar = async () => {
+    // Validação de campos
+    if (!cidade || !horario) {
+      alert('⚠️ Por favor, preencha a cidade e o horário que costuma trabalhar!');
+      return;
+    }
+
     setLoading(true);
     
-    // Simular geração de insights (em produção, usar API de IA)
-    setTimeout(() => {
-      const insightsGerados = gerarInsights(cidade, plataforma, horario);
-      setInsights(insightsGerados);
+    try {
+      const response = await fetch('/api/generate-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          cidade,
+          plataforma,
+          horario,
+          prompt: `Você é um consultor especializado em motoristas de aplicativo no Brasil. Analise e forneça:
+
+1. **3 HORÁRIOS RECOMENDADOS** (manhã, tarde, noite) com justificativa
+2. **REGIÕES COM MAIOR FLUXO** na cidade de ${cidade} para ${plataforma}
+3. **DICA PRÁTICA** para aumentar lucro em até 15%
+4. **FRASE MOTIVADORA** final
+
+Contexto:
+- Cidade: ${cidade}
+- Plataforma: ${plataforma}
+- Horário atual: ${horario}
+
+Use linguagem simples, clara e brasileira. Seja objetivo e prático.`
+        }),
+      });
+      
+      const data = await response.json();
+      setInsights(data.insight);
+    } catch (error) {
+      setInsights(`📍 **Dicas para ${plataforma} em ${cidade}**
+
+🕐 **Melhores Horários:**
+- Manhã (6h-9h): Horário de pico para deslocamento ao trabalho
+- Almoço (12h-14h): Alta demanda para entregas e deslocamentos
+- Noite (17h-20h): Retorno do trabalho e jantar
+
+💡 **Dica para aumentar lucro:**
+Fique próximo a regiões comerciais e estações de transporte nos horários de pico. Evite deslocamentos vazios planejando suas rotas.
+
+🚀 Continue focado e acompanhe seus resultados diariamente!`);
+    } finally {
       setLoading(false);
-    }, 1500);
-  };
-
-  const gerarInsights = (cidade: string, plataforma: Plataforma, horario: string): string[] => {
-    const insights: string[] = [];
-
-    // Horários de pico por plataforma
-    if (plataforma === 'Uber' || plataforma === '99') {
-      insights.push('🕐 **Melhores Horários**: 6h-9h (manhã), 12h-14h (almoço), 17h-20h (volta do trabalho)');
-      insights.push('💡 **Dica**: Fique próximo a estações de metrô e terminais de ônibus nos horários de pico');
-      insights.push('⚠️ **Evite**: 10h-11h e 14h-16h costumam ser horários mortos');
-    } else if (plataforma === 'iFood' || plataforma === 'Rappi') {
-      insights.push('🕐 **Melhores Horários**: 11h30-14h (almoço), 18h-21h (jantar)');
-      insights.push('💡 **Dica**: Fique próximo a restaurantes populares e áreas comerciais');
-      insights.push('⚠️ **Evite**: 15h-17h geralmente tem menos pedidos');
-    } else {
-      insights.push('🕐 **Melhores Horários**: Varia por plataforma - teste diferentes períodos');
-      insights.push('💡 **Dica**: Acompanhe os horários de maior demanda na sua região');
     }
-
-    // Estratégias gerais
-    insights.push('🎯 **Estratégia**: Reduza deslocamentos vazios - aceite corridas próximas quando possível');
-    insights.push('⛽ **Economia**: Planeje rotas para evitar trânsito pesado e economizar combustível');
-    
-    // Análise por cidade
-    if (cidade.toLowerCase().includes('são paulo') || cidade.toLowerCase().includes('sp')) {
-      insights.push('📍 **Região**: Em SP, regiões como Pinheiros, Vila Madalena e Itaim têm alta demanda');
-    } else if (cidade.toLowerCase().includes('rio')) {
-      insights.push('📍 **Região**: No Rio, Zona Sul e Barra costumam ter boa demanda');
-    }
-
-    // Dica de combustível
-    insights.push('⚡ **Combustível**: Abasteça em postos mais baratos - economize até R$ 20/dia');
-
-    return insights;
   };
 
   return (
@@ -85,7 +92,7 @@ export default function Insights() {
               value={cidade}
               onChange={(e) => setCidade(e.target.value)}
               placeholder="São Paulo"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
             />
           </div>
 
@@ -98,7 +105,7 @@ export default function Insights() {
             <select
               value={plataforma}
               onChange={(e) => setPlataforma(e.target.value as Plataforma)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
             >
               {plataformas.map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -117,7 +124,7 @@ export default function Insights() {
               value={horario}
               onChange={(e) => setHorario(e.target.value)}
               placeholder="Ex: 7h às 15h"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
             />
           </div>
 
@@ -125,7 +132,7 @@ export default function Insights() {
           <button
             onClick={handleGerar}
             disabled={!cidade || !horario || loading}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold py-4 rounded-xl hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold py-4 text-lg rounded-xl hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             {loading ? 'Gerando Insights...' : 'Gerar Insights'}
           </button>
@@ -133,33 +140,35 @@ export default function Insights() {
       </div>
 
       {/* Insights */}
-      {insights.length > 0 && (
+      {insights && (
         <div className="space-y-4">
           <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl shadow-lg p-6 border-2 border-purple-200">
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-purple-600" />
               Seus Insights Personalizados
             </h3>
-            <div className="space-y-3">
-              {insights.map((insight, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all"
-                >
-                  <p className="text-gray-700 leading-relaxed">{insight}</p>
-                </div>
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-purple-600 border-t-transparent"></div>
+                <p className="text-gray-600">Analisando dados e gerando insights...</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{insights}</p>
+              </div>
+            )}
           </div>
 
           {/* Card de Ação */}
-          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white">
-            <h3 className="font-bold text-xl mb-2">🚀 Próximo Passo</h3>
-            <p className="leading-relaxed">
-              Teste essas dicas nos próximos dias e acompanhe seus resultados no Dashboard. 
-              Ajuste sua estratégia conforme necessário para maximizar seus ganhos!
-            </p>
-          </div>
+          {!loading && (
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white">
+              <h3 className="font-bold text-xl mb-2">🚀 Próximo Passo</h3>
+              <p className="leading-relaxed">
+                Teste essas dicas nos próximos dias e acompanhe seus resultados no Dashboard. 
+                Ajuste sua estratégia conforme necessário para maximizar seus ganhos!
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
