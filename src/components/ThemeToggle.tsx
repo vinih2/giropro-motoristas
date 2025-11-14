@@ -1,30 +1,27 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState("light");
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
+  // Evita erro de hidratação
   useEffect(() => {
-    const saved = localStorage.getItem("theme") || "light";
-    setTheme(saved);
-    document.documentElement.classList.toggle("dark", saved === "dark");
+    setMounted(true);
   }, []);
 
-  const toggle = () => {
-    const t = theme === "light" ? "dark" : "light";
-    localStorage.setItem("theme", t);
-    setTheme(t);
-    document.documentElement.classList.toggle("dark", t === "dark");
-  };
+  if (!mounted) return null;
 
   return (
     <button
-      onClick={toggle}
-      className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 transition"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="p-2 rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition shadow-sm"
+      aria-label="Alternar tema"
     >
-      {theme === "light" ? <Moon size={18} /> : <Sun size={20} />}
+      {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
     </button>
   );
 }
