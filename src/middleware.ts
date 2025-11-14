@@ -5,8 +5,10 @@ import type { NextRequest } from 'next/server'
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
 
+  // Cria cliente do supabase com req/res corretos (IMPORTANTE)
   const supabase = createMiddlewareClient({ req, res })
 
+  // Checa sessão do usuário
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -24,11 +26,11 @@ export async function middleware(req: NextRequest) {
     req.nextUrl.pathname.startsWith(route)
   )
 
-  // Not logged in
+  // Se não logado e tentando acessar rota protegida
   if (isProtected && !session) {
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/login'
-    return NextResponse.redirect(redirectUrl)
+    const url = req.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
   return res
