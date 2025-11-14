@@ -6,11 +6,32 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatarMoeda } from '@/lib/calculations';
 
-// Palavras-chave para encontrar as marcas populares na lista da API
-const MARCAS_ALVO = [
-  'Chevrolet', 'Volkswagen', 'Fiat', 'Ford', 'Toyota', 'Honda', 'Hyundai', 
-  'Renault', 'Jeep', 'Nissan', 'Citroën', 'Peugeot', 'Mitsubishi', 'BMW', 
-  'Mercedes', 'Audi', 'Kia', 'Chery', 'JAC', 'Land Rover', 'Volvo', 'Suzuki', 'BYD'
+// ✅ LISTA EXATA DA FROTA BRASILEIRA
+// Isso filtra o lixo da API (caminhões, marcas gringas, etc)
+const MARCAS_BRASIL = [
+  'GM - Chevrolet',
+  'VW - VolksWagen',
+  'Fiat',
+  'Ford',
+  'Toyota',
+  'Honda',
+  'Hyundai',
+  'Renault',
+  'Jeep',
+  'Nissan',
+  'Citroën',
+  'Peugeot',
+  'Mitsubishi',
+  'BMW',
+  'Mercedes-Benz',
+  'Audi',
+  'Kia Motors',
+  'Caoa Chery', // Ajustado para nome comum na API
+  'JAC',
+  'Land Rover',
+  'Volvo',
+  'Suzuki',
+  'BYD' // Adicionando BYD que está crescendo
 ];
 
 export default function FipeCalculator() {
@@ -27,28 +48,28 @@ export default function FipeCalculator() {
   const [loading, setLoading] = useState(false);
   const [loadingModelos, setLoadingModelos] = useState(false);
 
-  // 1. Carregar e Filtrar Marcas (Executa apenas uma vez)
+  // 1. Carregar e FILTRAR Marcas
   useEffect(() => {
     fetch('https://brasilapi.com.br/api/fipe/marcas/v1/carros')
       .then(res => res.json())
       .then(data => {
         if (!Array.isArray(data)) return;
         
-        // Filtra apenas se o nome da marca conter uma das palavras-chave
+        // Lógica de Filtro: Só aceita se o nome bater com a nossa lista
         const marcasFiltradas = data
-          .filter((m: any) => MARCAS_ALVO.some(alvo => m.nome.toLowerCase().includes(alvo.toLowerCase())))
+          .filter((m: any) => MARCAS_BRASIL.some(br => m.nome.includes(br) || br.includes(m.nome)))
           .sort((a: any, b: any) => a.nome.localeCompare(b.nome));
         
         setMarcas(marcasFiltradas);
       })
-      .catch(console.error);
+      .catch(err => console.error("Erro FIPE:", err));
   }, []);
 
   // 2. Carregar Modelos
   useEffect(() => {
     if (!marcaSel) return;
     setLoadingModelos(true);
-    setModeloSel(''); setAnoSel(''); setValorFipe(null); // Reset
+    setModeloSel(''); setAnoSel(''); setValorFipe(null); // Resetar
     
     fetch(`https://brasilapi.com.br/api/fipe/modelos/v1/${marcaSel}`)
       .then(res => res.json())
@@ -62,7 +83,7 @@ export default function FipeCalculator() {
   // 3. Carregar Anos
   useEffect(() => {
     if (!marcaSel || !modeloSel) return;
-    setAnoSel(''); setValorFipe(null); // Reset
+    setAnoSel(''); setValorFipe(null); // Resetar
 
     fetch(`https://brasilapi.com.br/api/fipe/anos/v1/${marcaSel}/${modeloSel}`)
       .then(res => res.json())
@@ -72,7 +93,7 @@ export default function FipeCalculator() {
       .catch(console.error);
   }, [marcaSel, modeloSel]);
 
-  // 4. Buscar Valor Final
+  // 4. Buscar Valor
   const buscarValor = async () => {
     if (!marcaSel || !modeloSel || !anoSel) return;
     setLoading(true);
@@ -83,7 +104,7 @@ export default function FipeCalculator() {
       const valorNumerico = parseFloat(data.valor.replace('R$ ', '').replace('.', '').replace(',', '.'));
       setValorFipe(valorNumerico);
 
-      // Cálculo: 15% de depreciação anual / 40.000 km rodados
+      // Cálculo de Depreciação: 15% ao ano / 40.000 km
       const depPorKm = (valorNumerico * 0.15) / 40000;
       setDepreciacaoKm(depPorKm);
       
@@ -104,13 +125,14 @@ export default function FipeCalculator() {
       </h3>
 
       <div className="grid grid-cols-1 gap-4 mb-4">
-        {/* SELETOR DE MARCA */}
+        {/* MARCA */}
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Marca</label>
           <Select onValueChange={setMarcaSel} value={marcaSel}>
             <SelectTrigger className="w-full dark:bg-gray-800 dark:border-gray-700 dark:text-white">
               <SelectValue placeholder="Selecione a Marca" />
             </SelectTrigger>
+            {/* ⚡ AQUI ESTÁ A CORREÇÃO DO 'GIGANTE': max-h-[250px] */}
             <SelectContent className="max-h-[250px] overflow-y-auto bg-white dark:bg-gray-900">
               {marcas.map((m) => (
                 <SelectItem key={String(m.codigo)} value={String(m.codigo)}>
@@ -121,12 +143,12 @@ export default function FipeCalculator() {
           </Select>
         </div>
 
-        {/* SELETOR DE MODELO */}
+        {/* MODELO */}
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Modelo</label>
           <Select onValueChange={setModeloSel} value={modeloSel} disabled={!marcaSel || loadingModelos}>
             <SelectTrigger className="w-full dark:bg-gray-800 dark:border-gray-700 dark:text-white">
-              <SelectValue placeholder={loadingModelos ? "Carregando modelos..." : "Selecione o Modelo"} />
+              <SelectValue placeholder={loadingModelos ? "Carregando..." : "Selecione o Modelo"} />
             </SelectTrigger>
             <SelectContent className="max-h-[250px] overflow-y-auto bg-white dark:bg-gray-900">
               {modelos.map((m) => (
@@ -138,7 +160,7 @@ export default function FipeCalculator() {
           </Select>
         </div>
 
-        {/* SELETOR DE ANO */}
+        {/* ANO */}
         <div className="space-y-1">
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Ano</label>
           <Select onValueChange={setAnoSel} value={anoSel} disabled={!modeloSel}>
