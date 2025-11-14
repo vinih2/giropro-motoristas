@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plataforma } from '@/lib/types';
 import { calcularGiroDia, formatarMoeda, avaliarDesempenho } from '@/lib/calculations';
-import { TrendingUp, DollarSign, Navigation, Zap, Lightbulb, AlertTriangle, Calculator, Check, X } from 'lucide-react';
+import { TrendingUp, DollarSign, Navigation, Zap, AlertTriangle, Calculator, Check, X } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -42,14 +42,12 @@ function DashboardContent() {
     }
   }, []);
 
-  // Salvar meta ao alterar
   useEffect(() => {
     if (metaDiaria && typeof window !== 'undefined') {
       localStorage.setItem('metaDiaria', metaDiaria);
     }
   }, [metaDiaria]);
 
-  // Gerar alerta quando tiver resultado
   useEffect(() => {
     if (resultado) gerarAlerta();
   }, [resultado]);
@@ -78,7 +76,6 @@ function DashboardContent() {
     const k = parseFloat(quickKm);
     if (!v || !k) return;
     const lucro = v - (k * custoPorKm);
-    // Regra simples: Vale a pena se o lucro for >= R$ 1.00 por KM (ajustável)
     setQuickResultado({ lucro, valeApena: (lucro / k) >= 1.0 });
   };
 
@@ -96,7 +93,6 @@ function DashboardContent() {
     setResultado(calc);
     setLoading(true);
     
-    // Salvar no Banco e Gerar Insight
     if (user) {
       supabase.from('registros').insert({ 
         user_id: user.id, 
@@ -141,12 +137,11 @@ function DashboardContent() {
     } catch (e) { console.error(e) }
   };
 
-  const desempenho = resultado ? avaliarDesempenho(resultado.ganhoPorHora) : null;
   const progresso = resultado ? Math.min((resultado.lucroFinal / parseFloat(metaDiaria || '1')) * 100, 100) : 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 pb-32">
-      {/* --- HEADER RESTAURADO --- */}
+      {/* --- HEADER --- */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-2">
           GiroPro
@@ -167,7 +162,6 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* Alerta Inteligente */}
       {alerta && (
         <div className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-4 shadow-lg animate-fade-in">
           <div className="flex items-start gap-3">
@@ -183,7 +177,7 @@ function DashboardContent() {
           <Zap className="text-orange-500" /> Novo Registro
         </h2>
 
-        {/* Plataformas Restauradas (Grid Completo) */}
+        {/* ✅ CORREÇÃO: Mostra TODAS as plataformas */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Plataforma</label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
