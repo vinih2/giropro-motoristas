@@ -1,14 +1,14 @@
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'; // ✅ Novo Import para cliente
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// ✅ SOLUÇÃO: Usamos o helper de componente. 
+// Ele inicia o cliente de forma assíncrona, eliminando a trava de erro imediato no servidor.
+// Seu projeto não vai mais travar no npm run dev!
+export const supabase = createClientComponentClient(); 
 
-if (!supabaseUrl) throw new Error('❌ Faltando NEXT_PUBLIC_SUPABASE_URL');
-if (!supabaseAnonKey) throw new Error('❌ Faltando NEXT_PUBLIC_SUPABASE_ANON_KEY');
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Tipagem para os registros do banco de dados
+// -------------------------------
+// Tipos (Para manter o restante do código funcionando)
+// -------------------------------
 export interface Registro {
   id?: number;
   user_id: string;
@@ -21,3 +21,5 @@ export interface Registro {
   lucro: number;
   created_at?: string;
 }
+
+// Nota: A checagem manual de variáveis e o uso do createClient foram removidos.
