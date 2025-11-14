@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TipoVeiculo } from '@/lib/types';
 import { calcularCustoPorKm, formatarMoeda } from '@/lib/calculations';
-import { Fuel, Zap, TrendingDown, Wrench, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Fuel, Zap, TrendingDown, Wrench, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -16,111 +16,245 @@ export default function CustoKm() {
   const [preco, setPreco] = useState('');
   const [km, setKm] = useState('');
   const [resultado, setResultado] = useState<any>(null);
+  const [loadingAPI, setLoadingAPI] = useState(false);
 
   // -- Estados Manutenção --
   const [kmAtual, setKmAtual] = useState('');
   const [proxTrocaOleo, setProxTrocaOleo] = useState('');
   
-  // Função Calculadora
+  // Carregar do localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const savedKm = localStorage.getItem('kmAtualVeiculo');
+        if (savedKm) setKmAtual(savedKm);
+        
+        const savedTroca = localStorage.getItem('proxTrocaOleo');
+        if (savedTroca) setProxTrocaOleo(savedTroca);
+    }
+  }, []);
+
+  // Salvar manutenção ao editar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        if (kmAtual) localStorage.setItem('kmAtualVeiculo', kmAtual);
+        if (proxTrocaOleo) localStorage.setItem('proxTrocaOleo', proxTrocaOleo);
+    }
+  }, [kmAtual, proxTrocaOleo]);
+
+  // --- Lógica da Calculadora ---
   const handleCalcular = () => {
     const c = parseFloat(consumo);
     const p = parseFloat(preco);
     const k = parseFloat(km || '0');
-    if (!c || !p) return alert('Preencha consumo e preço!');
     
+    if (!c || !p) return alert('Preencha consumo e preço!');
+    if (isNaN(c) || isNaN(p)) return alert('Valores inválidos');
+
     const calc = calcularCustoPorKm({
         tipoVeiculo, consumoMedio: c, precoCombustivel: p, kmRodados: k
     });
+    
     setResultado(calc);
     if (typeof window !== 'undefined') localStorage.setItem('custoPorKm', calc.custoPorKm.toFixed(2));
   };
 
-  // Função Manutenção (Simples)
-  const kmRestanteOleo = (parseFloat(proxTrocaOleo) || 0) - (parseFloat(kmAtual) || 0);
-  const percentualOleo = proxTrocaOleo ? Math.max(0, (kmRestanteOleo / 10000) * 100) : 100; // Assume ciclo de 10k
+  // --- Simulação de API de Preço ---
+  const buscarPrecosCombustivel = async () => {
+    setLoadingAPI(true);
+    setTimeout(() => {
+        setPreco('5.89'); // Valor simulado
+        setLoadingAPI(false);
+        alert('Preço médio atualizado!');
+    }, 1000);
+  };
+
+  // --- Lógica de Manutenção Otimizada ---
+  const kmA = parseFloat(kmAtual);
+  const kmP = parseFloat(proxTrocaOleo);
+  
+  let statusOleo = "Aguardando dados...";
+  let corStatus = "text-gray-500";
+  let percentualVida = 100;
+  let kmRestante = 0;
+  let dadosValidos = false;
+
+  if (!isNaN(kmA) && !isNaN(kmP) && kmA > 0 && kmP > 0) {
+    dadosValidos = true;
+    kmRestante = kmP - kmA;
+    
+    // Se o usuário colocar intervalo (ex: 10000) em vez de odômetro (ex: 150000), 
+    // o kmRestante seria negativo grande (ex: -140000). 
+    // Vamos assumir que se kmP < kmA, ele errou ou venceu.
+    
+    if (kmRestante < 0) {
+       statusOleo = "VENCIDO! ⚠️";
+       corStatus = "text-red-600 font-bold";
+       percentualVida = 0;
+    } else if (kmRestante < 1000) {
+       statusOleo = `Atenção! Faltam ${kmRestante} km`;
+       corStatus = "text-orange-500 font-bold";
+       percentualVida = (kmRestante / 10000) * 100; // Visual relativo a 10k
+    } else {
+       statusOleo = `OK ✅ (Faltam ${kmRestante} km)`;
+       corStatus = "text-green-600 font-bold";
+       percentualVida = Math.min(100, (kmRestante / 10000) * 100);
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
       <div className="text-center mb-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl mb-4 shadow-lg">
+          <Fuel className="w-8 h-8 text-white" />
+        </div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gestão do Veículo</h1>
+        <p className="text-gray-600 dark:text-gray-300">Controle custos e manutenção em um só lugar</p>
       </div>
 
       <Tabs defaultValue="calculadora" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="calculadora">💰 Custo/KM</TabsTrigger>
-          <TabsTrigger value="manutencao">🔧 Manutenção</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+          <TabsTrigger value="calculadora" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 rounded-lg">💰 Custo/KM</TabsTrigger>
+          <TabsTrigger value="manutencao" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 rounded-lg">🔧 Manutenção</TabsTrigger>
         </TabsList>
 
-        {/* ABA 1: CALCULADORA (Código Original Resumido) */}
+        {/* ABA 1: CALCULADORA */}
         <TabsContent value="calculadora">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800 space-y-4">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Fuel className="w-5 h-5 text-blue-600"/> Calculadora</h2>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800 space-y-5">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
+                <Zap className="w-5 h-5 text-blue-600"/> Entradas
+            </h2>
             
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {['Carro Flex', 'Moto', 'Elétrico', 'Diesel'].map(t => (
-                    <Button key={t} variant={tipoVeiculo === t ? 'default' : 'outline'} onClick={() => setTipoVeiculo(t as any)} className="w-full">{t}</Button>
+                    <button 
+                        key={t} 
+                        onClick={() => setTipoVeiculo(t as any)} 
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            tipoVeiculo === t 
+                            ? 'bg-blue-600 text-white shadow-md' 
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                    >
+                        {t}
+                    </button>
                 ))}
             </div>
             
-            <div className="space-y-3">
-                <Input type="number" placeholder="Consumo (km/L)" value={consumo} onChange={e => setConsumo(e.target.value)} />
-                <Input type="number" placeholder="Preço Combustível (R$)" value={preco} onChange={e => setPreco(e.target.value)} />
-                <Button onClick={handleCalcular} className="w-full text-lg h-12">Calcular</Button>
+            <div className="space-y-4">
+                <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Consumo Médio (km/L)</label>
+                    <Input type="number" placeholder="Ex: 10.5" value={consumo} onChange={e => setConsumo(e.target.value)} className="text-lg" />
+                </div>
+                
+                <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Preço Combustível (R$)</label>
+                    <div className="flex gap-2">
+                        <Input type="number" placeholder="Ex: 5.49" value={preco} onChange={e => setPreco(e.target.value)} className="text-lg" />
+                        <Button onClick={buscarPrecosCombustivel} disabled={loadingAPI} variant="outline" className="h-11">
+                            {loadingAPI ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div> : <Download size={18} />}
+                        </Button>
+                    </div>
+                </div>
+
+                <Button onClick={handleCalcular} className="w-full text-lg h-12 bg-blue-600 hover:bg-blue-700 text-white">Calcular Custo</Button>
             </div>
 
             {resultado && (
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 text-center">
-                    <p className="text-sm text-blue-600">Custo por KM</p>
-                    <p className="text-4xl font-bold text-blue-700 dark:text-blue-300">{formatarMoeda(resultado.custoPorKm)}</p>
+                <div className="mt-6 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 text-center animate-fade-in">
+                    <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wide">Seu Custo Real</p>
+                    <p className="text-5xl font-bold text-blue-700 dark:text-blue-300 my-2">{formatarMoeda(resultado.custoPorKm)}<span className="text-lg text-blue-500">/km</span></p>
+                    <p className="text-xs text-blue-500 dark:text-blue-400">Atualizado e salvo para uso no Dashboard</p>
                 </div>
             )}
           </div>
         </TabsContent>
 
-        {/* ABA 2: MANUTENÇÃO (Nova Feature) */}
+        {/* ABA 2: MANUTENÇÃO (CORRIGIDA) */}
         <TabsContent value="manutencao">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-gray-100 dark:border-gray-800 space-y-6">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Wrench className="w-5 h-5 text-orange-600"/> Controle Preventivo</h2>
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
+                    <Wrench className="w-5 h-5 text-orange-600"/> Troca de Óleo
+                </h2>
+                {dadosValidos && kmRestante < 1000 && <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">Atenção</span>}
+            </div>
             
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">KM Atual do Veículo</label>
-                    <Input type="number" placeholder="Ex: 150000" value={kmAtual} onChange={e => setKmAtual(e.target.value)} />
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        1. KM Atual do Painel
+                    </label>
+                    <div className="relative">
+                        <Input 
+                            type="number" 
+                            placeholder="Ex: 150000" 
+                            value={kmAtual} 
+                            onChange={e => setKmAtual(e.target.value)} 
+                            className="pl-4 text-lg h-12 border-2 focus:border-orange-500"
+                        />
+                    </div>
+                    <p className="text-xs text-gray-500">Digite exatamente o que mostra no painel do carro.</p>
                 </div>
+
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Próxima Troca de Óleo (KM)</label>
-                    <Input type="number" placeholder="Ex: 155000" value={proxTrocaOleo} onChange={e => setProxTrocaOleo(e.target.value)} />
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        2. Odômetro da Próxima Troca
+                    </label>
+                    <div className="relative">
+                        <Input 
+                            type="number" 
+                            placeholder="Ex: 160000" 
+                            value={proxTrocaOleo} 
+                            onChange={e => setProxTrocaOleo(e.target.value)} 
+                            className="pl-4 text-lg h-12 border-2 focus:border-orange-500"
+                        />
+                    </div>
+                    <p className="text-xs text-gray-500">Olhe na etiqueta do vidro: "Próxima troca com..."</p>
                 </div>
             </div>
 
-            {kmAtual && proxTrocaOleo && (
-                <div className="space-y-4 mt-6">
-                    <div className="flex justify-between items-end">
-                        <div>
-                            <p className="font-bold text-lg">Troca de Óleo</p>
-                            <p className={`text-sm ${kmRestanteOleo < 1000 ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
-                                {kmRestanteOleo > 0 ? `Faltam ${kmRestanteOleo} km` : 'VENCIDO!'}
-                            </p>
-                        </div>
-                        {kmRestanteOleo < 1000 && <AlertCircle className="text-red-500 animate-pulse" />}
-                    </div>
-                    <Progress value={(1 - (kmRestanteOleo / 5000)) * 100} className={`h-3 ${kmRestanteOleo < 1000 ? 'bg-red-100' : ''}`} />
-                    
-                    {/* Exemplo de Item Fixo */}
-                    <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+            {/* CARD DE STATUS */}
+            <div className="mt-6 p-6 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Status da Manutenção</span>
+                    <span className={`text-lg ${corStatus}`}>{statusOleo}</span>
+                </div>
+                
+                <div className="relative h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                        className={`absolute top-0 left-0 h-full transition-all duration-500 ease-out ${
+                            kmRestante < 0 ? 'bg-red-600 w-full' : // Vencido (Barra cheia vermelha)
+                            kmRestante < 1000 ? 'bg-orange-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${dadosValidos ? percentualVida : 0}%` }}
+                    />
+                </div>
+                
+                {!dadosValidos && (
+                    <p className="text-center text-sm text-gray-400 mt-3">Preencha os dois campos acima para ver o status.</p>
+                )}
+            </div>
+
+            {/* Checklists Adicionais */}
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Outras Verificações</h3>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
                         <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
                             <CheckCircle2 className="text-green-500 w-5 h-5" />
-                            <span>Pneus (Revisado há 2 meses)</span>
+                            <span>Calibragem dos Pneus</span>
                         </div>
+                        <span className="text-xs text-gray-400">Semanal</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                        <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                            <CheckCircle2 className="text-gray-300 dark:text-gray-600 w-5 h-5" />
+                            <span>Filtro de Ar</span>
+                        </div>
+                        <span className="text-xs text-gray-400">A cada troca de óleo</span>
                     </div>
                 </div>
-            )}
-            
-            {!kmAtual && (
-                <div className="text-center py-8 text-gray-400">
-                    <p>Preencha a KM atual para ver os alertas.</p>
-                </div>
-            )}
+            </div>
           </div>
         </TabsContent>
       </Tabs>
