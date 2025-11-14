@@ -52,23 +52,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-orange-50 via-white to-yellow-50">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-orange-50 via-white to-yellow-50 dark:from-gray-950 dark:via-gray-900 dark:to-black">
       <div className="max-w-md w-full">
         {/* Logo e Título */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-orange-600 via-yellow-600 to-orange-500 bg-clip-text text-transparent mb-3">
             GiroPro
           </h1>
-          <p className="text-gray-600 text-lg">Entre para acessar seu coach financeiro</p>
+          <p className="text-gray-600 dark:text-gray-300 text-lg">Entre para acessar seu coach financeiro</p>
         </div>
 
         {/* Card de Login */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 border border-gray-100 dark:border-gray-800">
           {/* Botão Google */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold py-4 px-6 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold py-4 px-6 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mb-4"
           >
             <Chrome className="w-5 h-5" />
             Continuar com Google
@@ -77,17 +77,17 @@ export default function LoginPage() {
           {/* Divisor */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500 font-medium">ou</span>
+              <span className="px-4 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-medium">ou</span>
             </div>
           </div>
 
           {/* Formulário Email */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Email
               </label>
               <input
@@ -96,7 +96,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 required
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
               />
             </div>
 
@@ -123,15 +123,15 @@ export default function LoginPage() {
           {message && (
             <div className={`mt-4 p-4 rounded-xl text-sm font-medium ${
               message.includes('✅') 
-                ? 'bg-green-100 text-green-800 border border-green-300' 
-                : 'bg-red-100 text-red-800 border border-red-300'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-300 dark:border-green-800' 
+                : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-300 dark:border-red-800'
             }`}>
               {message}
             </div>
           )}
 
           {/* Info */}
-          <p className="text-center text-xs text-gray-500 mt-6">
+          <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">
             Ao entrar, você concorda com nossos Termos de Uso e Política de Privacidade
           </p>
         </div>
