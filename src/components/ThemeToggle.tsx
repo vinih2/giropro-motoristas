@@ -1,27 +1,33 @@
 'use client';
 
-import { useTheme } from "next-themes";
-import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 
 export default function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState("light");
 
-  // Evita erro de hidratação
   useEffect(() => {
-    setMounted(true);
+    // Lê o tema salvo ou define 'light' como padrão
+    const saved = localStorage.getItem("theme") || "light";
+    setTheme(saved);
+    // Aplica a classe 'dark' no HTML se necessário
+    document.documentElement.classList.toggle("dark", saved === "dark");
   }, []);
 
-  if (!mounted) return null;
+  const toggle = () => {
+    const t = theme === "light" ? "dark" : "light";
+    localStorage.setItem("theme", t);
+    setTheme(t);
+    document.documentElement.classList.toggle("dark", t === "dark");
+  };
 
   return (
     <button
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="p-2 rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition shadow-sm"
-      aria-label="Alternar tema"
+      onClick={toggle}
+      className="p-2 rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+      title="Alternar Tema"
     >
-      {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+      {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
     </button>
   );
 }
